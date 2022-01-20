@@ -8,7 +8,7 @@ project (glowbox)
 # Set python 3 name
 #
 set (PYTHON_3 "python")
-
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "bin/")
 #
 # CMake setup
 #
@@ -123,3 +123,6 @@ target_link_libraries (${PROJECT_NAME}
                        fmt::fmt
                        ${GLFW_LIBRARIES}
                        ${GLAD_LIBRARIES})
+
+file(COPY res DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+                       
