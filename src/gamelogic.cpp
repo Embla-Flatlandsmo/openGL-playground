@@ -21,7 +21,7 @@
 
 #include "utilities/imageLoader.hpp"
 #include "utilities/glfont.h"
-#include "particles/sim.hpp"
+#include "compute/particle.hpp"
 
 enum KeyFrameAction {
     BOTTOM, TOP
@@ -111,48 +111,45 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
 
 
     camera = new Gloom::Camera();
-
-    shader = new Gloom::Shader();
-    shader->makeBasicShader("./res/shaders/simple.vert", "./res/shaders/simple.frag");
-    shader->activate();
-
-
-    // Create meshes
-    Mesh pad = cube(padDimensions, glm::vec2(30, 40), true);
-    Mesh box = cube(boxDimensions, glm::vec2(90), true, true);
-    Mesh sphere = generateSphere(1.0, 40, 40);
-
-    // Fill buffers
-    unsigned int ballVAO = generateBuffer(sphere);
-    unsigned int boxVAO  = generateBuffer(box);
-    unsigned int padVAO  = generateBuffer(pad);
-
-    // Construct scene
-    rootNode = createSceneNode();
-    boxNode  = createSceneNode();
-    padNode  = createSceneNode();
-    ballNode = createSceneNode();
-
-    rootNode->children.push_back(boxNode);
-    rootNode->children.push_back(padNode);
-    rootNode->children.push_back(ballNode);
-
-    boxNode->vertexArrayObjectID = boxVAO;
-    boxNode->VAOIndexCount = box.indices.size();
-
-    padNode->vertexArrayObjectID = padVAO;
-    padNode->VAOIndexCount = pad.indices.size();
-
-    ballNode->vertexArrayObjectID = ballVAO;
-    ballNode->VAOIndexCount = sphere.indices.size();
+    initParticleSystem();
+    // shader = new Gloom::Shader();
+    // shader->makeBasicShader("./res/shaders/simple.vert", "./res/shaders/simple.frag");
+    // shader->activate();
 
 
-    // initShaders();
-    // initBuffers();
+    // // Create meshes
+    // Mesh pad = cube(padDimensions, glm::vec2(30, 40), true);
+    // Mesh box = cube(boxDimensions, glm::vec2(90), true, true);
+    // Mesh sphere = generateSphere(1.0, 40, 40);
+
+    // // Fill buffers
+    // unsigned int ballVAO = generateBuffer(sphere);
+    // unsigned int boxVAO  = generateBuffer(box);
+    // unsigned int padVAO  = generateBuffer(pad);
+
+    // // Construct scene
+    // rootNode = createSceneNode();
+    // boxNode  = createSceneNode();
+    // padNode  = createSceneNode();
+    // ballNode = createSceneNode();
+
+    // rootNode->children.push_back(boxNode);
+    // rootNode->children.push_back(padNode);
+    // rootNode->children.push_back(ballNode);
+
+    // boxNode->vertexArrayObjectID = boxVAO;
+    // boxNode->VAOIndexCount = box.indices.size();
+
+    // padNode->vertexArrayObjectID = padVAO;
+    // padNode->VAOIndexCount = pad.indices.size();
+
+    // ballNode->vertexArrayObjectID = ballVAO;
+    // ballNode->VAOIndexCount = sphere.indices.size();
+
 
     getTimeDeltaSeconds();
 
-    std::cout << fmt::format("Initialized scene with {} SceneNodes.", totalChildren(rootNode)) << std::endl;
+    // std::cout << fmt::format("Initialized scene with {} SceneNodes.", totalChildren(rootNode)) << std::endl;
 
     std::cout << "Ready. Click to start!" << std::endl;
 }
@@ -166,10 +163,9 @@ void updateFrame(GLFWwindow* window) {
     glm::mat4 projection = glm::perspective(glm::radians(80.0f), float(windowWidth) / float(windowHeight), 0.1f, 350.f);
 
     glm::mat4 VP = projection * camera->getViewMatrix();
-    
-    // drawBoids(window, camera);
 
-    updateNodeTransformations(rootNode, VP);
+    updateParticles();
+    // updateNodeTransformations(rootNode, VP);
 }
 
 void updateNodeTransformations(SceneNode* node, glm::mat4 transformationThusFar) {
@@ -218,6 +214,6 @@ void renderFrame(GLFWwindow* window) {
     int windowWidth, windowHeight;
     glfwGetWindowSize(window, &windowWidth, &windowHeight);
     glViewport(0, 0, windowWidth, windowHeight);
-
-    renderNode(rootNode);
+    renderParticles(window, camera);
+    // renderNode(rootNode);
 }
