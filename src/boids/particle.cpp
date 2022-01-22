@@ -7,6 +7,7 @@
 
 #include <utilities/shader.hpp>
 #include "particle.hpp"
+#include "boundingBox.hpp"
 
 #define NUM_PARTICLES 1024 * 1024
 #define WORK_GROUP_SIZE 128
@@ -37,6 +38,8 @@ GLuint vao;
 
 Gloom::Shader *colorShader;
 Gloom::Shader *computeShader;
+
+BoundingBox* boundingBox;
 
 void initParticles()
 {
@@ -88,6 +91,7 @@ void initParticles()
 
 void initParticleSystem()
 {
+    boundingBox = new BoundingBox(glm::vec3(-20., -20., -20.), glm::vec3(50., 50., 50.));
     colorShader = new Gloom::Shader();
     colorShader->makeBasicShader("res/shaders/particle.vert", "res/shaders/particle.frag");
 
@@ -95,12 +99,14 @@ void initParticleSystem()
     computeShader->attach("res/shaders/particle.comp");
     computeShader->link();
 
-    initParticles();    
+    initParticles();
 }
 
 void updateParticles()
 {
     computeShader->activate();
+    glUniform3fv(computeShader->getUniformFromName("boundingBoxLow"), 1, glm::value_ptr(boundingBox->low));
+    glUniform3fv(computeShader->getUniformFromName("boundingBoxHigh"), 2, glm::value_ptr(boundingBox->high));
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, posSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, velSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, colSSBO);
@@ -115,12 +121,11 @@ void updateParticles()
 
 void renderParticles(GLFWwindow *window, Gloom::Camera *camera)
 {
-
     int windowWidth, windowHeight;
     glfwGetWindowSize(window, &windowWidth, &windowHeight);
     glm::mat4 projection = glm::perspective(glm::radians(80.0f), float(windowWidth) / float(windowHeight), 0.1f, 350.f);
     glm::mat4 VP = projection * camera->getViewMatrix();
-
+    boundingBox->renderAsWireframe(window, camera);
     colorShader->activate();
 
     glUniformMatrix4fv(colorShader->getUniformFromName("VP"), 1, GL_FALSE, glm::value_ptr(VP));

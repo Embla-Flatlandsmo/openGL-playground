@@ -21,7 +21,8 @@
 
 #include "utilities/imageLoader.hpp"
 #include "utilities/glfont.h"
-#include "compute/particle.hpp"
+#include "boids/particle.hpp"
+// #include "boids/boundingBox.hpp"
 
 enum KeyFrameAction {
     BOTTOM, TOP
@@ -47,6 +48,7 @@ sf::SoundBuffer* buffer;
 Gloom::Shader* shader;
 sf::Sound* sound;
 Gloom::Camera* camera;
+// BoundingBox* boundingBox;
 
 const glm::vec3 boxDimensions(180, 90, 90);
 const glm::vec3 padDimensions(30, 3, 40);
@@ -112,6 +114,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
 
     camera = new Gloom::Camera();
     initParticleSystem();
+    // boundingBox = new BoundingBox(glm::vec3(0., 0., 0.), glm::vec3(50., 50., 50.));
     // shader = new Gloom::Shader();
     // shader->makeBasicShader("./res/shaders/simple.vert", "./res/shaders/simple.frag");
     // shader->activate();
@@ -214,6 +217,7 @@ void renderFrame(GLFWwindow* window) {
     int windowWidth, windowHeight;
     glfwGetWindowSize(window, &windowWidth, &windowHeight);
     glViewport(0, 0, windowWidth, windowHeight);
+    // boundingBox->renderAsWireframe(window, camera);
     renderParticles(window, camera);
     // renderNode(rootNode);
 }

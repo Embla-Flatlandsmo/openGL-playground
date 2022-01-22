@@ -2,10 +2,17 @@
 For playing around with openGL in C++.
 
 The starter code is lifted from https://github.com/bartvbl/TDT4230-Assignment-1
+ 
+![The state of it right now](the-state-of-it.png)
+
+## TODO:
+- [] Visualize bounding box as a wireframe
+- [] Implement boids behaviour in particles
+- [] Implement naive flocking
 
 ## Project structure
 
-`main.cpp` initializes the window, `program.cpp` sets up openGL settings and `gameLogic.cpp` handles input initialization and updating. Finally, the particles (as it stands) are initialized in `compute/particle.cpp`. It goes a bit deep but I just wanted to see if I could get my particle code to work with the initial code. I have really only tweaked `gameLogic.cpp` and `compute/particle.cpp`, the rest is as it was when I started out.
+`main.cpp` initializes the window, `program.cpp` sets up openGL settings and `gameLogic.cpp` handles input initialization and updating. Finally, the particles (as it stands) are initialized in `boids/particle.cpp`. It goes a bit deep but I just wanted to see if I could get my particle code to work with the initial code. I have really only tweaked `gameLogic.cpp` and `boids/particle.cpp`, the rest is as it was when I started out.
 ## Building:
 1. `git clone --recursive https://github.com/Embla-Flatlandsmo/openGL-playground.git`
 2. `cd openGL-playground`
