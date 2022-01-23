@@ -22,7 +22,7 @@
 #include "utilities/imageLoader.hpp"
 #include "utilities/glfont.h"
 #include "boids/particle.hpp"
-// #include "boids/boundingBox.hpp"
+#include "boids/boundingBox.hpp"
 
 enum KeyFrameAction {
     BOTTOM, TOP
@@ -115,33 +115,33 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     camera = new Gloom::Camera();
     initParticleSystem();
     // boundingBox = new BoundingBox(glm::vec3(0., 0., 0.), glm::vec3(50., 50., 50.));
-    // shader = new Gloom::Shader();
-    // shader->makeBasicShader("./res/shaders/simple.vert", "./res/shaders/simple.frag");
+    shader = new Gloom::Shader();
+    shader->makeBasicShader("./res/shaders/simple.vert", "./res/shaders/simple.frag");
     // shader->activate();
 
 
     // // Create meshes
     // Mesh pad = cube(padDimensions, glm::vec2(30, 40), true);
-    // Mesh box = cube(boxDimensions, glm::vec2(90), true, true);
+    Mesh box = cube(boxDimensions, glm::vec2(90), true, true);
     // Mesh sphere = generateSphere(1.0, 40, 40);
 
     // // Fill buffers
     // unsigned int ballVAO = generateBuffer(sphere);
-    // unsigned int boxVAO  = generateBuffer(box);
+    unsigned int boxVAO  = generateBuffer(box);
     // unsigned int padVAO  = generateBuffer(pad);
 
     // // Construct scene
-    // rootNode = createSceneNode();
-    // boxNode  = createSceneNode();
+    rootNode = createSceneNode();
+    boxNode  = createSceneNode();
     // padNode  = createSceneNode();
     // ballNode = createSceneNode();
 
-    // rootNode->children.push_back(boxNode);
+    rootNode->children.push_back(boxNode);
     // rootNode->children.push_back(padNode);
     // rootNode->children.push_back(ballNode);
 
-    // boxNode->vertexArrayObjectID = boxVAO;
-    // boxNode->VAOIndexCount = box.indices.size();
+    boxNode->vertexArrayObjectID = boxVAO;
+    boxNode->VAOIndexCount = box.indices.size();
 
     // padNode->vertexArrayObjectID = padVAO;
     // padNode->VAOIndexCount = pad.indices.size();
@@ -168,7 +168,7 @@ void updateFrame(GLFWwindow* window) {
     glm::mat4 VP = projection * camera->getViewMatrix();
 
     updateParticles();
-    // updateNodeTransformations(rootNode, VP);
+    updateNodeTransformations(rootNode, VP);
 }
 
 void updateNodeTransformations(SceneNode* node, glm::mat4 transformationThusFar) {
@@ -219,5 +219,6 @@ void renderFrame(GLFWwindow* window) {
     glViewport(0, 0, windowWidth, windowHeight);
     // boundingBox->renderAsWireframe(window, camera);
     renderParticles(window, camera);
-    // renderNode(rootNode);
+    shader->activate();
+    renderNode(rootNode);
 }

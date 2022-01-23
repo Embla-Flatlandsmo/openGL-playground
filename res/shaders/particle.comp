@@ -58,19 +58,19 @@ void main() {
     // (I think it's bad for performance?)
     if ((p.x < boundingBoxLow.x) && (v.x < 0.0)) {
         vp.x *= -1;
-    } else if ((p.x > boundingBoxHigh.x) && (v.x > 0.0)) {
+    } else if ((p.x > boundingBoxHigh.x) && (v.x >= 0.0)) {
         vp.x *= -1;
     }
 
     if ((p.y < boundingBoxLow.y) && (v.y < 0.0)) {
         vp.y *= -1;
-    } else if ((p.y > boundingBoxHigh.y) && (v.y > 0.0)) {
+    } else if ((p.y > boundingBoxHigh.y) && (v.y >= 0.0)) {
         vp.y *= -1;
     }
 
     if ((p.z < boundingBoxLow.z) && (v.z < 0.0)) {
         vp.z *= -1;
-    } else if ((p.z > boundingBoxHigh.z) && (v.z > 0.0)) {
+    } else if ((p.z > boundingBoxHigh.z) && (v.z >= 0.0)) {
         vp.z *= -1;
     }
 

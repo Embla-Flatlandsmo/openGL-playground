@@ -6,9 +6,12 @@ The starter code is lifted from https://github.com/bartvbl/TDT4230-Assignment-1
 ![The state of it right now](the-state-of-it.png)
 
 ## TODO:
-- [] Visualize bounding box as a wireframe
-- [] Implement boids behaviour in particles
-- [] Implement naive flocking
+- [x] Visualize bounding box as a wireframe
+- [ ] Visualize particles as tetrahedrons
+- [ ] Visualize particles as arbitrary meshes
+- [ ] Come up with a good way to structure the program
+- [ ] Implement boids behaviour in particles
+- [ ] Implement naive flocking
 
 ## Project structure
 

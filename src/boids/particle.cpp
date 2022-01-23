@@ -48,7 +48,10 @@ void initParticles()
 
     glGenBuffers(1, &posSSBO);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, posSSBO);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, NUM_PARTICLES * sizeof(struct pos), NULL, GL_STATIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, NUM_PARTICLES * sizeof(struct pos), points, GL_STATIC_DRAW);
+    
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0,  0);
 
     GLint bufMask = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
     points = (struct pos *)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, NUM_PARTICLES * sizeof(struct pos), bufMask);
@@ -64,7 +67,7 @@ void initParticles()
 
     glGenBuffers(1, &velSSBO);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, velSSBO);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, NUM_PARTICLES * sizeof(struct vel), NULL, GL_STATIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, NUM_PARTICLES * sizeof(struct vel), vels, GL_STATIC_DRAW);
     vels = (struct vel *)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, NUM_PARTICLES * sizeof(struct vel), bufMask);
     for (int i = 0; i < NUM_PARTICLES; i++)
     {
@@ -77,7 +80,9 @@ void initParticles()
 
     glGenBuffers(1, &colSSBO);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, colSSBO);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, NUM_PARTICLES * sizeof(struct color), NULL, GL_STATIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, NUM_PARTICLES * sizeof(struct color), cols, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
     cols = (struct color *)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, NUM_PARTICLES * sizeof(struct color), bufMask);
     for (int i = 0; i < NUM_PARTICLES; i++)
     {
@@ -91,13 +96,14 @@ void initParticles()
 
 void initParticleSystem()
 {
-    boundingBox = new BoundingBox(glm::vec3(-20., -20., -20.), glm::vec3(50., 50., 50.));
+    boundingBox = new BoundingBox(glm::vec3(-20., -20., -20.), glm::vec3(20., 20., 20.));
     colorShader = new Gloom::Shader();
     colorShader->makeBasicShader("res/shaders/particle.vert", "res/shaders/particle.frag");
 
     computeShader = new Gloom::Shader();
     computeShader->attach("res/shaders/particle.comp");
     computeShader->link();
+    // computeShader->activate();
 
     initParticles();
 }
@@ -105,8 +111,12 @@ void initParticleSystem()
 void updateParticles()
 {
     computeShader->activate();
+    // glm::vec3 boundingBoxLow = glm::vec3(-20.,-20.,-20.);
+    // glm::vec3 boundingBoxHigh = glm::vec3(20., 20., 20.);
+    // glUniform3fv(computeShader->getUniformFromName("boundingBoxLow"), 1, glm::value_ptr(boundingBoxLow));
+    // glUniform3fv(computeShader->getUniformFromName("boundingBoxHigh"), 2, glm::value_ptr(boundingBoxHigh));
     glUniform3fv(computeShader->getUniformFromName("boundingBoxLow"), 1, glm::value_ptr(boundingBox->low));
-    glUniform3fv(computeShader->getUniformFromName("boundingBoxHigh"), 2, glm::value_ptr(boundingBox->high));
+    glUniform3fv(computeShader->getUniformFromName("boundingBoxHigh"), 1, glm::value_ptr(boundingBox->high));
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, posSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, velSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, colSSBO);
@@ -129,7 +139,7 @@ void renderParticles(GLFWwindow *window, Gloom::Camera *camera)
     colorShader->activate();
 
     glUniformMatrix4fv(colorShader->getUniformFromName("VP"), 1, GL_FALSE, glm::value_ptr(VP));
-
+    glBindVertexArray(vao);
     // Input position values
     glBindBuffer(GL_ARRAY_BUFFER, posSSBO);
     glEnableVertexAttribArray(0);
@@ -140,9 +150,11 @@ void renderParticles(GLFWwindow *window, Gloom::Camera *camera)
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 4*sizeof(float), 0);
 
+
     glDrawArrays(GL_POINTS, 0, NUM_PARTICLES);
-    glDisableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glEnable(GL_CULL_FACE);
+    // glDrawElements(GL_POINTS, NUM_PARTICLES, GL_UNSIGNED_INT, nullptr);
+    // glDisableVertexAttribArray(0);
+    // glBindBuffer(GL_ARRAY_BUFFER, 0);
+    // glEnable(GL_CULL_FACE);
     colorShader->deactivate();
 }

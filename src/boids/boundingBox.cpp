@@ -72,14 +72,14 @@ BoundingBox::BoundingBox(glm::vec3 low, glm::vec3 high)
     this->high = high;
     boxProgram = new Gloom::Shader();
 
-    boxProgram->makeBasicShader("res/shaders/simple.vert", "res/shaders/simple.frag");
-    boxProgram->activate();
-
-    box = cube(high-low, glm::vec2(90), true, true);
+    boxProgram->makeBasicShader("res/shaders/box.vert", "res/shaders/box.frag");
+    // boxProgram->activate();
+    glm::vec3 diagonal = glm::vec3(high.x-low.x, high.y-low.y, high.z-low.z);
+    box = boundingBoxMesh(diagonal);
     boxVAO  = generateBuffer(box);
 
     // boxVAO = wireframeCube(high-low);
-    boxProgram->deactivate();
+    // boxProgram->deactivate();
 }
 
 BoundingBox::~BoundingBox()
@@ -91,16 +91,18 @@ void BoundingBox::renderAsWireframe(GLFWwindow *window, Gloom::Camera *camera)
 {
     int windowWidth, windowHeight;
     glfwGetWindowSize(window, &windowWidth, &windowHeight);
-    // glm::mat4 model = glm::translate(low);
+    glm::mat4 model = glm::translate(low);
     glm::mat4 projection = glm::perspective(glm::radians(80.0f), float(windowWidth) / float(windowHeight), 0.1f, 350.f);
-    glm::mat4 MVP = projection * camera->getViewMatrix();
+    glm::mat4 MVP = projection * camera->getViewMatrix()*model;
 
     boxProgram->activate();
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINES);
+    glLineWidth(3);
+    // glEnableVertexAttribArray(0);
     glBindVertexArray(boxVAO);
     glUniformMatrix4fv(boxProgram->getUniformFromName("MVP"), 1, GL_FALSE, glm::value_ptr(MVP));
     // glDrawElements(GL_LINE_LOOP, WIREFRAME_NUM_INDICES, GL_UNSIGNED_INT, nullptr);
-    glDrawElements(GL_LINE_LOOP, box.indices.size(), GL_UNSIGNED_INT, nullptr);
+    glDrawElements(GL_LINES, box.indices.size(), GL_UNSIGNED_INT, nullptr);
     boxProgram->deactivate();
 }
 
