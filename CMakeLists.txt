@@ -2,7 +2,7 @@
 # Specify minimum CMake version and project name
 #
 cmake_minimum_required (VERSION 3.0)
-project (glowbox)
+project (openGL-playground)
 
 #
 # Set python 3 name

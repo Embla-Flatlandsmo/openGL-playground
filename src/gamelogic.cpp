@@ -21,8 +21,7 @@
 
 #include "utilities/imageLoader.hpp"
 #include "utilities/glfont.h"
-#include "boids/particle.hpp"
-#include "boids/boundingBox.hpp"
+#include "particles/particleSystem.hpp"
 
 enum KeyFrameAction {
     BOTTOM, TOP
@@ -48,7 +47,7 @@ sf::SoundBuffer* buffer;
 Gloom::Shader* shader;
 sf::Sound* sound;
 Gloom::Camera* camera;
-// BoundingBox* boundingBox;
+ParticleSystem* particles;
 
 const glm::vec3 boxDimensions(180, 90, 90);
 const glm::vec3 padDimensions(30, 3, 40);
@@ -113,46 +112,29 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
 
 
     camera = new Gloom::Camera();
-    initParticleSystem();
-    // boundingBox = new BoundingBox(glm::vec3(0., 0., 0.), glm::vec3(50., 50., 50.));
     shader = new Gloom::Shader();
     shader->makeBasicShader("./res/shaders/simple.vert", "./res/shaders/simple.frag");
-    // shader->activate();
+    shader->activate();
 
 
-    // // Create meshes
-    // Mesh pad = cube(padDimensions, glm::vec2(30, 40), true);
+    // Create meshes
     Mesh box = cube(boxDimensions, glm::vec2(90), true, true);
-    // Mesh sphere = generateSphere(1.0, 40, 40);
 
-    // // Fill buffers
-    // unsigned int ballVAO = generateBuffer(sphere);
+    // Fill buffers
     unsigned int boxVAO  = generateBuffer(box);
-    // unsigned int padVAO  = generateBuffer(pad);
 
-    // // Construct scene
+    // Construct scene
     rootNode = createSceneNode();
     boxNode  = createSceneNode();
-    // padNode  = createSceneNode();
-    // ballNode = createSceneNode();
 
     rootNode->children.push_back(boxNode);
-    // rootNode->children.push_back(padNode);
-    // rootNode->children.push_back(ballNode);
 
     boxNode->vertexArrayObjectID = boxVAO;
     boxNode->VAOIndexCount = box.indices.size();
 
-    // padNode->vertexArrayObjectID = padVAO;
-    // padNode->VAOIndexCount = pad.indices.size();
-
-    // ballNode->vertexArrayObjectID = ballVAO;
-    // ballNode->VAOIndexCount = sphere.indices.size();
-
+    particles = new ParticleSystem(glm::vec3(-20.,-20.,-20.), glm::vec3(20., 20., 20.));
 
     getTimeDeltaSeconds();
-
-    // std::cout << fmt::format("Initialized scene with {} SceneNodes.", totalChildren(rootNode)) << std::endl;
 
     std::cout << "Ready. Click to start!" << std::endl;
 }
@@ -166,8 +148,7 @@ void updateFrame(GLFWwindow* window) {
     glm::mat4 projection = glm::perspective(glm::radians(80.0f), float(windowWidth) / float(windowHeight), 0.1f, 350.f);
 
     glm::mat4 VP = projection * camera->getViewMatrix();
-
-    updateParticles();
+    particles->update();
     updateNodeTransformations(rootNode, VP);
 }
 
@@ -217,8 +198,7 @@ void renderFrame(GLFWwindow* window) {
     int windowWidth, windowHeight;
     glfwGetWindowSize(window, &windowWidth, &windowHeight);
     glViewport(0, 0, windowWidth, windowHeight);
-    // boundingBox->renderAsWireframe(window, camera);
-    renderParticles(window, camera);
+    particles->render(window, camera);
     shader->activate();
     renderNode(rootNode);
 }

@@ -1,10 +1,11 @@
 #pragma once
-#include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
+// Local headers
 #include <utilities/camera.hpp>
-#include <utilities/mesh.h>
 #include <utilities/shader.hpp>
 
+// System headers
+#include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
 
 /**
  * @brief Representation of bounding box
@@ -14,12 +15,6 @@
 class BoundingBox
 {
 public:
-    /**
-     * @brief Construct a new Bounding Box object
-     * 
-     * @param low Lowest values (xyz) of bounding box
-     * @param high Highest values (xyz) of bounding box
-     */
     BoundingBox(glm::vec3 low, glm::vec3 high);
     /**
      * @brief Destroy the Bounding Box object
@@ -45,12 +40,10 @@ private:
     /**
      * @brief Program with vertex and fragment shader to render the box
      */
-    Gloom::Shader *boxProgram;
-
-    Mesh box;
+    Gloom::Shader *boxShader;
 
     /**
-     * @brief VAO for bounding box
+     * @brief VAO for visualizing bounding box
      */
     unsigned int boxVAO;
 };

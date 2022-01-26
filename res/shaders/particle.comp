@@ -87,5 +87,5 @@ void main() {
     
     Positions[gid].xyz = pp;
     Velocities[gid].xyz = vp;
-    Colors[gid].xyz = vp;
+    Colors[gid].xyz = abs(normalize(vp));
 }
