@@ -277,3 +277,41 @@ Mesh generateBoundingBoxMesh(glm::vec3 scale)
     }
     return m;
 }
+
+Mesh generateBoid(float size)
+{
+    //GEOMETRY SETUP
+    const int numPrimitives = 4;
+    const int vertCount = (numPrimitives + 1);
+    const int numIndices = numPrimitives * 3;
+
+    std::vector<glm::vec3> vertices;
+    std::vector<uint32_t> indices;
+    vertices.reserve(vertCount);
+    indices.reserve(numIndices);
+
+
+    for (size_t i = 0; i < vertCount-1; i++)
+    {
+        glm::vec3 point = glm::vec3(
+            0,
+            sin(i * 2 * M_PI / (numPrimitives)) * size,
+            cos(i * 2 * M_PI / (numPrimitives)) * size
+        );
+        vertices.emplace_back(point);
+    }
+    glm::vec3 final_point = glm::vec3(2*size, 0, 0);
+    vertices.emplace_back(final_point);
+
+    for (size_t i = 0; i < numPrimitives; i++)
+    {
+        indices.emplace_back(i);
+        indices.emplace_back((i+1)%numPrimitives);
+        indices.emplace_back(numPrimitives);
+    };
+
+    Mesh m;
+    m.vertices = vertices;
+    m.indices = indices;
+    return m;
+}

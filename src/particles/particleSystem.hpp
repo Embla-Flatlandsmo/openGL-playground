@@ -6,7 +6,7 @@
 #include <utilities/camera.hpp>
 #include <utilities/shader.hpp>
 
-#define NUM_PARTICLES 1024*1024
+#define NUM_PARTICLES 1024
 struct pos
 {
     float x, y, z, w;
