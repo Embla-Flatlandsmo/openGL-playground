@@ -220,7 +220,7 @@ Mesh generateSphere(float sphereRadius, int slices, int layers)
     return mesh;
 }
 
-Mesh boundingBoxMesh(glm::vec3 scale)
+Mesh generateBoundingBoxMesh(glm::vec3 scale)
 {
     // glm::vec3 points[8];
     // int indices[36];
