@@ -40,5 +40,4 @@ void main() {
 	vec3 rvert = vec3(rot * vec4(vert.xyz, 1.0f));
  	gl_Position = VP * vec4(particleSize*rvert + pos.xyz, 1.0);
 	vert_color = col;
-	vert_color = vec4(0.5 * normal_in + 0.5, 1.0);
 }

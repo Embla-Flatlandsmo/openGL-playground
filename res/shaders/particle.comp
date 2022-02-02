@@ -19,10 +19,20 @@ layout(std140, binding=6) buffer Col
 
 uniform vec3 boundingBoxLow;
 uniform vec3 boundingBoxHigh;
+uniform int numBoids;
 
-
-const vec3 G = vec3(0.0, -0.1, 0.0);
 const float DT = 0.1;
+const float cohesion_factor = 0.01;
+const float separation_range = 1.0;
+const float alignment_factor = 0.125;
+const float view_range = 3.0;
+const float max_vel = 2.0;
+
+struct boid_t
+{
+    vec3 pos;
+    vec3 vel;
+};
 
 float vecLen (vec3 v)
 {
@@ -34,58 +44,107 @@ vec3 normalize (vec3 v)
 	return v / (vecLen(v)+0.0001);
 }
 
-// From https://stackoverflow.com/questions/46637752/pseudo-random-number-generation-on-the-gpu
-uint wang_hash(uint seed)
-{
-    seed = (seed ^ 61) ^ (seed >> 16);
-    seed *= 9;
-    seed = seed ^ (seed >> 4);
-    seed *= 0x27d4eb2d;
-    seed = seed ^ (seed >> 15);
-    return seed;
+vec3 limit(vec3 v, float limit){
+    if (dot(v, v) > limit * limit){
+        return normalize(v) * limit;
+    }
+    return v;
+}
+
+boid_t get_boid(uint gid) {
+    boid_t b;
+    b.pos = Positions[gid].xyz;
+    b.vel = Velocities[gid].xyz;
+    return b;
+}
+
+void update_boid(uint gid, boid_t b) {
+    Positions[gid].xyz = b.pos;
+    Velocities[gid].xyz = b.vel;
+}
+
+// For explanation, see http://www.vergenet.net/~conrad/boids/pseudocode.html
+vec3 separation(uint gid) {
+    vec3 c = vec3(0.f);
+    boid_t current_boid = get_boid(gid);
+    for (uint i = 1; i < numBoids; i++) {
+        uint otherID = (gid+i)%numBoids;
+        boid_t other_boid = get_boid(otherID);
+        float dist = distance(other_boid.pos, current_boid.pos);
+        if (dist < view_range && dist < separation_range) {
+            c -= (other_boid.pos-current_boid.pos);
+        }
+
+    }
+    return c;
+}
+
+vec3 alignment(uint gid) {
+    boid_t current_boid = get_boid(gid);
+    vec3 v = current_boid.vel;
+    uint num_boids_affecting = 0;
+    for (uint i = 1; i < numBoids; i++) {
+        uint otherID = (gid+i)%numBoids;
+        boid_t other_boid = get_boid(otherID);
+        if (distance(other_boid.pos, current_boid.pos) < view_range) {
+            v += other_boid.vel;
+            num_boids_affecting++;
+        }
+
+    }
+    if (num_boids_affecting == 0) return vec3(0.f);
+    v /= num_boids_affecting;
+    return v*alignment_factor;
+}
+
+vec3 cohesion(uint gid) {
+    boid_t current_boid = get_boid(gid);
+    vec3 flock_center = vec3(0.f);
+    uint num_boids_affecting = 0;
+    for (uint i = 1; i < numBoids; i++) {
+        uint otherID = (gid+i)%numBoids;
+        boid_t other_boid = get_boid(otherID);
+        if (distance(other_boid.pos, current_boid.pos) < view_range) {
+            flock_center += other_boid.pos;
+            num_boids_affecting++;
+        }
+
+    }
+    if (num_boids_affecting == 0) return flock_center;
+    flock_center /= num_boids_affecting;
+    return (flock_center-current_boid.pos)*cohesion_factor;
 }
 
 void main() {
     uint gid = gl_GlobalInvocationID.x;
+    boid_t current_boid = get_boid(gid);
 
-    vec3 p = Positions[gid].xyz;
-    vec3 v = Velocities[gid].xyz;;
-    vec3 vp = v;
-    // vec3 op = p - boundingBoxHigh+boundingBoxLow;
-    // vec3 vp = vec3(abs(v.x)*sign(op.x), abs(v.y)*sign(op.y), abs(v.z)*sign(op.z));
-    
+    vec3 coh = cohesion(gid);
+    vec3 sep = separation(gid);
+    vec3 alig = alignment(gid);
+    current_boid.vel += coh+sep+alig;
+    current_boid.vel = limit(current_boid.vel, max_vel);
+    current_boid.pos += current_boid.vel*DT;
+
     // TODO: Find some way to do this without conditional branching 
     // (I think it's bad for performance?)
-    if ((p.x < boundingBoxLow.x) && (v.x < 0.0)) {
-        vp.x *= -1;
-    } else if ((p.x > boundingBoxHigh.x) && (v.x >= 0.0)) {
-        vp.x *= -1;
+    if ((current_boid.pos.x < boundingBoxLow.x) && (current_boid.vel.x < 0.0)) {
+        current_boid.vel.x *= -1;
+    } else if ((current_boid.pos.x > boundingBoxHigh.x) && (current_boid.vel.x >= 0.0)) {
+        current_boid.vel.x *= -1;
     }
 
-    if ((p.y < boundingBoxLow.y) && (v.y < 0.0)) {
-        vp.y *= -1;
-    } else if ((p.y > boundingBoxHigh.y) && (v.y >= 0.0)) {
-        vp.y *= -1;
+    if ((current_boid.pos.y < boundingBoxLow.y) && (current_boid.vel.y < 0.0)) {
+        current_boid.vel.y *= -1;
+    } else if ((current_boid.pos.y > boundingBoxHigh.y) && (current_boid.vel.y >= 0.0)) {
+        current_boid.vel.y *= -1;
     }
 
-    if ((p.z < boundingBoxLow.z) && (v.z < 0.0)) {
-        vp.z *= -1;
-    } else if ((p.z > boundingBoxHigh.z) && (v.z >= 0.0)) {
-        vp.z *= -1;
+    if ((current_boid.pos.z < boundingBoxLow.z) && (current_boid.vel.z < 0.0)) {
+        current_boid.vel.z *= -1;
+    } else if ((current_boid.pos.z > boundingBoxHigh.z) && (current_boid.vel.z >= 0.0)) {
+        current_boid.vel.z *= -1;
     }
-
-    // if (p.x > boundingBoxHigh.x || p.x < boundingBoxLow.x) {
-    //     v.x = -1;
-    // }
-    // if (p.y > boundingBoxHigh.y || p.y < boundingBoxLow.y) {
-    //     v.y = -1;
-    // }
-    // if (p.z > boundingBoxHigh.z || p.z < boundingBoxLow.z) {
-    //     v.z = -1;
-    // }
-    vec3 pp = p + vp*DT;
     
-    Positions[gid].xyz = pp;
-    Velocities[gid].xyz = vp;
-    Colors[gid].xyz = abs(normalize(vp));
+    update_boid(gid, current_boid);
 }

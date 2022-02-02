@@ -32,7 +32,7 @@ ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
     colorShader->activate();
     glUniform1f(colorShader->getUniformFromName("particleSize"), particleSize);
     colorShader->deactivate();
-    
+
     // The compute shader must be in its own program
     computeShader = new Gloom::Shader();
     computeShader->attach("res/shaders/particle.comp");
@@ -42,6 +42,7 @@ ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
     computeShader->activate();
     glUniform3fv(computeShader->getUniformFromName("boundingBoxLow"), 1, glm::value_ptr(boundingBox->low));
     glUniform3fv(computeShader->getUniformFromName("boundingBoxHigh"), 1, glm::value_ptr(boundingBox->high));
+    glUniform1i(computeShader->getUniformFromName("numBoids"), NUM_PARTICLES);
     computeShader->deactivate();
     initParticles();
 }
@@ -119,12 +120,12 @@ void ParticleSystem::initParticles()
     glBufferData(GL_SHADER_STORAGE_BUFFER, NUM_PARTICLES * sizeof(struct pos), particlePoints, GL_DYNAMIC_COPY);
 
     particlePoints = (struct pos *)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, NUM_PARTICLES * sizeof(struct pos), bufMask);
-
+    glm::vec3 diagonal = boundingBox->high-boundingBox->low;
     for (int i = 0; i < NUM_PARTICLES; i++)
     {
-        particlePoints[i].x = rand() / (float)RAND_MAX;
-        particlePoints[i].y = rand() / (float)RAND_MAX;
-        particlePoints[i].z = rand() / (float)RAND_MAX;
+        particlePoints[i].x = boundingBox->low.x+diagonal.x*(rand() / (float)RAND_MAX);
+        particlePoints[i].y = boundingBox->low.y+diagonal.y*(rand() / (float)RAND_MAX);
+        particlePoints[i].z = boundingBox->low.z+diagonal.z*(rand() / (float)RAND_MAX);
         particlePoints[i].w = 1.0;
     }
 
@@ -151,9 +152,9 @@ void ParticleSystem::initParticles()
     particleCols = (struct color *)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, NUM_PARTICLES * sizeof(struct color), bufMask);
     for (int i = 0; i < NUM_PARTICLES; i++)
     {
-        particleCols[i].r = 1.0;
-        particleCols[i].g = 0.0;
-        particleCols[i].b = 0.0;
+        particleCols[i].r = abs(particleVels[i].vx/MAX_VELOCITY);
+        particleCols[i].g = abs(particleVels[i].vy/MAX_VELOCITY);
+        particleCols[i].b = abs(particleVels[i].vz/MAX_VELOCITY);
         particleCols[i].a = 1.0;
     }
     glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);

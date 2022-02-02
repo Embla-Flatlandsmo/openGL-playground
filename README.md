@@ -3,14 +3,18 @@ For playing around with openGL in C++.
 
 The starter code is lifted from https://github.com/bartvbl/TDT4230-Assignment-1
  
-![The state of it right now](the-state-of-it.png)
+![The state of it right now](the-state-of-it.gif)
 
 ## TODO:
 - [x] Visualize bounding box as a wireframe
 - [x] Visualize particles as tetrahedrons (using instancing)
 - [x] Visualize particles as arbitrary meshes
-- [ ] Implement boids behaviour in particles
-- [ ] Implement naive flocking
+- [x] Implement boids behaviour in particles
+- [x] Implement naive flocking
+- [ ] Clean up ugly compute shader code
+- [ ] Implement dynamic spatial hashing ala [Wicked Engine Net](https://wickedengine.net/2018/05/21/scalabe-gpu-fluid-simulation/)
+- [ ] Implement bin sorting with counting sort ala [this Nvidia thing](https://on-demand.gputechconf.com/gtc/2014/presentations/S4117-fast-fixed-radius-nearest-neighbor-gpu.pdf)
+- [ ] Do the rest of the things necessary to make A MILLION BOIDS!!!!
 - [ ] Come up with a good way to structure the program
 
 ### Less important TODOs:
