@@ -8,12 +8,13 @@ The starter code is lifted from https://github.com/bartvbl/TDT4230-Assignment-1
 ## TODO:
 - [x] Visualize bounding box as a wireframe
 - [x] Visualize particles as tetrahedrons (using instancing)
-- [ ] Fix the accidental face cull of some of the tetrahedrons
-- [ ] Create normals for the tetrahedrons
-- [ ] Visualize particles as arbitrary meshes
-- [ ] Come up with a good way to structure the program
+- [x] Visualize particles as arbitrary meshes
 - [ ] Implement boids behaviour in particles
 - [ ] Implement naive flocking
+- [ ] Come up with a good way to structure the program
+
+### Less important TODOs:
+- [ ] Make a better obj loader (that doesn't emit so many warnings)
 
 ## Project structure
 

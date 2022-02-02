@@ -9,6 +9,7 @@ project (openGL-playground)
 #
 set (PYTHON_3 "python")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "bin/")
+set(CMAKE_CURRENT_BINARY_DIR "bin/")
 #
 # CMake setup
 #
@@ -124,5 +125,14 @@ target_link_libraries (${PROJECT_NAME}
                        ${GLFW_LIBRARIES}
                        ${GLAD_LIBRARIES})
 
-file(COPY res DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-                       
+# add_custom_target(copy-test-makefile ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/res)
+# add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/res
+#                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/res
+#                                                     ${CMAKE_CURRENT_BINARY_DIR}/res
+#                   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/res)
+
+add_custom_command(
+  TARGET ${PROJECT_NAME} POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_directory 
+    ${CMAKE_CURRENT_SOURCE_DIR}/res
+    $<TARGET_FILE_DIR:${PROJECT_NAME}>/res)

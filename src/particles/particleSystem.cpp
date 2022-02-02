@@ -4,6 +4,7 @@
 #include <particles/boundingBox.hpp>
 #include <utilities/shapes.h>
 #include <utilities/glutils.h>
+#include <utilities/objLoader.hpp>
 
 // System headers
 #include <glad/glad.h>
@@ -15,12 +16,11 @@
 #define WORK_GROUP_SIZE 128
 
 #define MAX_VELOCITY 2
-#define BASE 4 // number of primitives per boid
-#define VERTCOUNT (BASE + 1) * 3
-#define IDXCOUNT BASE * 3
 
 ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
 {
+    particleModel = new Mesh(loadObj("./res/models/boid.obj"));
+    particleSize = 0.5;
     boundingBox = new BoundingBox(low, high);
 
     particlePoints = new struct pos[NUM_PARTICLES];
@@ -29,7 +29,10 @@ ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
 
     colorShader = new Gloom::Shader();
     colorShader->makeBasicShader("res/shaders/particle.vert", "res/shaders/particle.frag");
-
+    colorShader->activate();
+    glUniform1f(colorShader->getUniformFromName("particleSize"), particleSize);
+    colorShader->deactivate();
+    
     // The compute shader must be in its own program
     computeShader = new Gloom::Shader();
     computeShader->attach("res/shaders/particle.comp");
@@ -46,6 +49,8 @@ ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
 ParticleSystem::~ParticleSystem()
 {
     // Some cleanup here is probably needed...
+    computeShader->destroy();
+    colorShader->destroy();
 }
 
 void ParticleSystem::update()
@@ -72,7 +77,8 @@ void ParticleSystem::render(GLFWwindow *window, Gloom::Camera *camera)
 {
     int windowWidth, windowHeight;
     glfwGetWindowSize(window, &windowWidth, &windowHeight);
-    // We set an arbitrary projection matrix to get some perspective going!
+
+    // We set a projection matrix to get some perspective going!
     glm::mat4 projection = glm::perspective(glm::radians(80.0f), float(windowWidth) / float(windowHeight), 0.1f, 350.f);
     glm::mat4 VP = projection * camera->getViewMatrix();
 
@@ -86,7 +92,7 @@ void ParticleSystem::render(GLFWwindow *window, Gloom::Camera *camera)
     glBindVertexArray(particleVAO);
     // Finally we draw the particles
     // glDrawArrays(GL_POINTS, 0, NUM_PARTICLES);
-    glDrawElementsInstanced(GL_TRIANGLES, IDXCOUNT, GL_UNSIGNED_INT, (void *)0, NUM_PARTICLES);
+    glDrawElementsInstanced(GL_TRIANGLES, particleModel->indices.size(), GL_UNSIGNED_INT, (void *)0, NUM_PARTICLES);
     colorShader->deactivate();
 }
 
@@ -103,53 +109,10 @@ void ParticleSystem::setDebugMode(bool debug)
 void ParticleSystem::initParticles()
 {
     colorShader->activate();
-    // const GLuint VERT_ATTRIB_LOC = colorShader->getAttribFromName("vert");
-    // const GLuint POS_ATTRIB_LOC = colorShader->getAttribFromName("position");
-    // const GLuint VEL_ATTRIB_LOC = colorShader->getAttribFromName("velocity");
-    // const GLuint COL_ATTRIB_LOC = colorShader->getAttribFromName("color");
-    const float boidSize = 0.5;
-
     GLint bufMask = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
 
+    particleVAO = generateBuffer(*particleModel);
 
-    //GEOMETRY SETUP
-    float verts[VERTCOUNT];
-
-    for (size_t i = 0; i < BASE; i++)
-    {
-        verts[i * 3] = 0,                                             //x
-            verts[i * 3 + 1] = sin(i * 2 * M_PI / (BASE)) * boidSize, //y
-            verts[i * 3 + 2] = cos(i * 2 * M_PI / (BASE)) * boidSize; //z
-    }
-
-    verts[BASE * 3] = 2 * boidSize,
-                 verts[BASE * 3 + 1] = 0,
-                 verts[BASE * 3 + 2] = 0;
-
-    unsigned int indices[IDXCOUNT];
-    for (size_t i = 0; i < BASE; i++)
-    {
-        indices[i * 3] = i,
-                    indices[i * 3 + 1] = (i + 1) % BASE,
-                    indices[i * 3 + 2] = BASE;
-    }
-
-    glGenVertexArrays(1, &particleVAO);
-    glBindVertexArray(particleVAO);
-    //vertices
-    GLuint bufGeometry;
-    glGenBuffers(1, &bufGeometry);
-    glBindBuffer(GL_ARRAY_BUFFER, bufGeometry);
-    glBufferData(GL_ARRAY_BUFFER, VERTCOUNT * sizeof(float), verts, GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), 0);
-
-    //indices
-    GLuint ebufGeometry;
-    glGenBuffers(1, &ebufGeometry);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebufGeometry);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, IDXCOUNT * sizeof(unsigned int), indices, GL_STATIC_DRAW);
     // Positions
     glGenBuffers(1, &particlePosSSBO);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, particlePosSSBO);
@@ -195,18 +158,19 @@ void ParticleSystem::initParticles()
     }
     glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
+    // Set up vertex attribute arrays for compute shader outputs
     glBindBuffer(GL_ARRAY_BUFFER, particlePosSSBO);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
-    glVertexAttribDivisor(1, 1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, particleVelSSBO);
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
-    glVertexAttribDivisor(2,1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, particleColSSBO);
     glEnableVertexAttribArray(3);
     glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
-    glVertexAttribDivisor(3,1);
+    glVertexAttribDivisor(3, 1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, particleVelSSBO);
+    glEnableVertexAttribArray(4);
+    glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
+    glVertexAttribDivisor(4,1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, particleColSSBO);
+    glEnableVertexAttribArray(5);
+    glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
+    glVertexAttribDivisor(5,1);
 }

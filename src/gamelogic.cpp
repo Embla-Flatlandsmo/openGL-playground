@@ -10,6 +10,7 @@
 #include <utilities/shapes.h>
 #include <utilities/glutils.h>
 #include <utilities/camera.hpp>
+#include <utilities/objLoader.hpp>
 #include <SFML/Audio/Sound.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -122,13 +123,11 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
 
     // Fill buffers
     unsigned int boxVAO  = generateBuffer(box);
-
     // Construct scene
     rootNode = createSceneNode();
     boxNode  = createSceneNode();
 
     rootNode->children.push_back(boxNode);
-
     boxNode->vertexArrayObjectID = boxVAO;
     boxNode->VAOIndexCount = box.indices.size();
 

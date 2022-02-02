@@ -1,27 +1,31 @@
 #version 430 core
 
 uniform layout(location = 1) mat4 VP;
-layout (location = 0) in vec3 vert;
-layout (location = 1) in vec4 pos;
-layout (location = 2) in vec4 vel;
-layout (location = 3) in vec4 col;
+uniform layout(location = 2) float particleSize;
+
+in layout (location = 0) vec3 vert;
+in layout (location = 1) vec3 normal_in;
+in layout (location = 2) vec2 textureCoordinates_in;
+in layout (location = 3) vec4 pos;
+in layout (location = 4) vec4 vel;
+in layout (location = 5) vec4 col;
 
 out vec4 vert_color;
 
 /**
  * Create rotation matrix from field vector.
- * The returned matrix can rotate vector (1, 0, 0)
- * into the desired setup. Used to rotate glyphs according
- * to vecotr field
+ * The returned matrix can rotate vector (0, 1, 0)
+ * into the desired setup. Used to rotate the object according 
+ * to its heading
  * http://www.neilmendoza.com/glsl-rotation-about-an-arbitrary-axis/
  */
 mat4 getRotationMat(vec3 vector)
 {
-	vec3 unit = vec3(1, 0, 0);
+	vec3 unit = vec3(0, 1, 0);
 	vec3 f = normalize(vector);
-	vec3 cross = cross(f, unit);
-	vec3 a = normalize(cross);
-	float s = length(cross);
+	vec3 x = cross(f, unit);
+	vec3 a = normalize(x);
+	float s = length(x);
 	float c = dot(f, unit);
 	float oc = 1.0 - c;
 
@@ -31,12 +35,10 @@ mat4 getRotationMat(vec3 vector)
                 0.0,                       0.0,                       0.0,                       1.0);
 
 }
-
 void main() {
 	mat4 rot = getRotationMat(vel.xyz);
 	vec3 rvert = vec3(rot * vec4(vert.xyz, 1.0f));
- 	gl_Position = VP * vec4(rvert + pos.xyz, 1.0);
-	// gl_Position = VP*vec4(position.xyz, 1.0);
+ 	gl_Position = VP * vec4(particleSize*rvert + pos.xyz, 1.0);
 	vert_color = col;
-	// colorVal = (clamp(colorValue, minColorValue, maxColorValue) - minColorValue) / max(1, (maxColorValue - minColorValue));
+	vert_color = vec4(0.5 * normal_in + 0.5, 1.0);
 }

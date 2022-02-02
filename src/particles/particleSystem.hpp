@@ -5,6 +5,7 @@
 #include <utilities/window.hpp>
 #include <utilities/camera.hpp>
 #include <utilities/shader.hpp>
+#include <utilities/mesh.h>
 
 #define NUM_PARTICLES 1024
 struct pos
@@ -44,6 +45,9 @@ private:
 
     Gloom::Shader *colorShader;
     Gloom::Shader *computeShader;
+
+    Mesh* particleModel;
+    float particleSize;
 
     bool debug = true;
 
