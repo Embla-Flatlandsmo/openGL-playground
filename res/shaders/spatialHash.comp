@@ -22,6 +22,6 @@ void main(void)
     uint gid = gl_GlobalInvocationID.x;
     vec3 diagonal = boundingBoxHigh-boundingBoxLow;
     vec3 range = diagonal/gridRes;
-    uint gridIdx = uvec3((Positions[gid]-boundingBoxLow)/range);
+    uint vgridIdx = uvec3((Positions[gid]-boundingBoxLow)/range);
     Indices[gid] = uint(gridRes.x * gridRes.y * vgridIdx.z + gridRes.x * vgridIdx.y + vgridIdx.x);
 }

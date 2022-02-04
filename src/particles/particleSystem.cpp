@@ -45,6 +45,7 @@ ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
     glUniform1i(computeShader->getUniformFromName("numBoids"), NUM_PARTICLES);
     computeShader->deactivate();
     initParticles();
+    initGridSorting();
 }
 
 ParticleSystem::~ParticleSystem()
@@ -56,6 +57,9 @@ ParticleSystem::~ParticleSystem()
 
 void ParticleSystem::update()
 {
+    countBucketSizes();
+    computePrefixSum();
+    computeReindexGrid();
     computeShader->activate();
 
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particlePosSSBO);
@@ -159,17 +163,17 @@ void ParticleSystem::initParticles()
     }
     glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
-    // Particle indices
-    particleIndices = new GLuint[NUM_PARTICLES];
-    glGenBuffers(1, &particleIndicesLoc);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER,particleIndicesLoc);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, NUM_PARTICLES * sizeof(GLuint), particleIndices, GL_STATIC_DRAW);
-    particleIndices = (GLuint*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, NUM_PARTICLES * sizeof(GLuint), bufMask);
-    for (int i = 0; i < NUM_PARTICLES; i++)
-    {
-        particleIndices[i]=i;
-    }
-    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+    // // Particle indices
+    // particleIndices = new GLuint[NUM_PARTICLES];
+    // glGenBuffers(1, &particleIndicesLoc);
+    // glBindBuffer(GL_SHADER_STORAGE_BUFFER,particleIndicesLoc);
+    // glBufferData(GL_SHADER_STORAGE_BUFFER, NUM_PARTICLES * sizeof(GLuint), particleIndices, GL_STATIC_DRAW);
+    // particleIndices = (GLuint*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, NUM_PARTICLES * sizeof(GLuint), bufMask);
+    // for (int i = 0; i < NUM_PARTICLES; i++)
+    // {
+    //     particleIndices[i]=i;
+    // }
+    // glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
 
     // Set up vertex attribute arrays for compute shader outputs
@@ -192,75 +196,98 @@ void ParticleSystem::initParticles()
 
 void ParticleSystem::initGridSorting() 
 {
-    // GLint bufMask = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
-    // const uint32_t numCells = this->boundingBox->numCells;
-    // prefixSums = new GLuint[this->boundingBox->numCells];
-    // bucketSizes = new GLuint[this->boundingBox->numCells];
-    // particleIndices = new GLuint[NUM_PARTICLES];
+    GLint bufMask = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
+    const uint32_t numCells = this->boundingBox->numCells;
+    prefixSums = new GLuint[this->boundingBox->numCells];
+    bucketSizes = new GLuint[this->boundingBox->numCells];
+    particleIndices = new GLuint[NUM_PARTICLES];
 
-    // glGenBuffers(1, &prefixSumsLoc);
-    // glBindBuffer(GL_SHADER_STORAGE_BUFFER, prefixSumsLoc);
-    // glBufferData(GL_SHADER_STORAGE_BUFFER, numCells * sizeof(GLuint), prefixSums, GL_DYNAMIC_COPY);
-    // prefixSums = (GLuint*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, numCells * sizeof(GLuint), bufMask);
-    // for (int i = 0; i < numCells; i++)
-    // {
-    //     prefixSums[i]=0;
-    // }
-    // glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+    glGenBuffers(1, &prefixSumsLoc);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, prefixSumsLoc);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, numCells * sizeof(GLuint), prefixSums, GL_DYNAMIC_COPY);
+    prefixSums = (GLuint*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, numCells * sizeof(GLuint), bufMask);
+    for (int i = 0; i < numCells; i++)
+    {
+        prefixSums[i]=0;
+    }
+    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
-    // glGenBuffers(1, &bucketSizesLoc);
-    // glBindBuffer(GL_SHADER_STORAGE_BUFFER, bucketSizesLoc);
-    // glBufferData(GL_SHADER_STORAGE_BUFFER, numCells * sizeof(GLuint), bucketSizes, GL_DYNAMIC_COPY);
-    // bucketSizes = (GLuint*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, numCells * sizeof(GLuint), bufMask);
-    // for (int i = 0; i < numCells; i++)
-    // {
-    //     bucketSizes[i]=0;
-    // }
-    // glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+    glGenBuffers(1, &bucketSizesLoc);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, bucketSizesLoc);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, numCells * sizeof(GLuint), bucketSizes, GL_DYNAMIC_COPY);
+    bucketSizes = (GLuint*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, numCells * sizeof(GLuint), bufMask);
+    for (int i = 0; i < numCells; i++)
+    {
+        bucketSizes[i]=0;
+    }
+    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
-    // glGenBuffers(1, &particleIndicesLoc);
-    // glBindBuffer(GL_SHADER_STORAGE_BUFFER,particleIndicesLoc);
-    // glBufferData(GL_SHADER_STORAGE_BUFFER, NUM_PARTICLES * sizeof(GLuint), particleIndices, GL_DYNAMIC_COPY);
-    // particleIndices = (GLuint*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, NUM_PARTICLES * sizeof(GLuint), bufMask);
-    // for (int i = 0; i < NUM_PARTICLES; i++)
-    // {
-    //     particleIndices[i]=i;
-    // }
-    // glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+    glGenBuffers(1, &particleIndicesLoc);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER,particleIndicesLoc);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, NUM_PARTICLES * sizeof(GLuint), particleIndices, GL_DYNAMIC_COPY);
+    particleIndices = (GLuint*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, NUM_PARTICLES * sizeof(GLuint), bufMask);
+    for (int i = 0; i < NUM_PARTICLES; i++)
+    {
+        particleIndices[i]=i;
+    }
+    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
-    // prefixSumShader = new Gloom::Shader();
-    // prefixSumShader->attach("res/shaders/prefixSum.comp");
-    // prefixSumShader->link();
+    prefixSumShader = new Gloom::Shader();
+    prefixSumShader->attach("res/shaders/prefixSum.comp");
+    prefixSumShader->link();
 
-    // gridBucketsShader = new Gloom::Shader();
-    // gridBucketsShader->attach("res/shaders/gridBuckets.comp");
-    // gridBucketsShader->link();
+    gridBucketsShader = new Gloom::Shader();
+    gridBucketsShader->attach("res/shaders/gridBuckets.comp");
+    gridBucketsShader->link();
 
-    // reindexShader = new Gloom::Shader();
-    // reindexShader->attach("res/shaders/reindex.comp");
-    // reindexShader->link();
+    reindexShader = new Gloom::Shader();
+    reindexShader->attach("res/shaders/reindex.comp");
+    reindexShader->link();
+    reindexShader->activate();
+    glUniform3fv(reindexShader->getUniformFromName("boundingBoxLow"), 1, glm::value_ptr(boundingBox->low));
+    glUniform3fv(reindexShader->getUniformFromName("boundingBoxHigh"), 1, glm::value_ptr(boundingBox->high));
+    glUniform3fv(reindexShader->getUniformFromName("gridRes"), 1, glm::value_ptr(boundingBox->resolution));
+    reindexShader->deactivate();
 
+}
+
+
+void ParticleSystem::countBucketSizes() {
+    gridBucketsShader->activate();
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particlePosSSBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 9, bucketSizesLoc);
+    glDispatchCompute(NUM_PARTICLES/WORK_GROUP_SIZE, 1, 1);
+    glMemoryBarrier(GL_ALL_BARRIER_BITS);
+    gridBucketsShader->deactivate();
 }
 
 void ParticleSystem::computePrefixSum() {
-    // prefixSumShader->activate();
-    // glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, prefixSumsLoc);
-    // glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 9, bucketSizesLoc);
-    // uint32_t chunkSize = 2;
-    // do
-    // {
-    //     glUniform1ui(prefixSumShader->getUniformFromName("chunkSize"), chunkSize);
-    //     glDispatchCompute(this->boundingBox->numCells/WORK_GROUP_SIZE, 1, 1);
-    //     glMemoryBarrier(GL_ALL_BARRIER_BITS);
-    //     chunkSize *= 2;
-    // } while (chunkSize <= this->boundingBox->numCells);
+
+    prefixSumShader->activate();
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, prefixSumsLoc);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 9, bucketSizesLoc);
+    uint32_t chunkSize = 2;
+    do
+    {
+        glUniform1ui(prefixSumShader->getUniformFromName("chunkSize"), chunkSize);
+        glDispatchCompute(this->boundingBox->numCells/WORK_GROUP_SIZE, 1, 1);
+        glMemoryBarrier(GL_ALL_BARRIER_BITS);
+        chunkSize *= 2;
+    } while (chunkSize <= this->boundingBox->numCells);
+
+    prefixSumShader->deactivate();
 }
 
 void ParticleSystem::computeReindexGrid() {
-    // reindexShader->activate();
+    reindexShader->activate();
 
-    // glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, prefixSums);
-    // glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 10, particleIndices);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, particlePosSSBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, prefixSumsLoc);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 9, bucketSizesLoc);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 10, particleIndicesLoc);
 
-    // glDispatchCompute(NUM_PARTICLES/WORK_GROUP_SIZE, 1, 1);
+    glDispatchCompute(NUM_PARTICLES/WORK_GROUP_SIZE, 1, 1);
+    glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
+    reindexShader->deactivate();
 } 

@@ -22,6 +22,11 @@ layout(std430, binding=3) readonly buffer particleIndex
     uint particleIndices[];
 };
 
+layout(std430, binding=8) readonly buffer prefixSum
+{
+    uint prefixSums[];
+};
+
 uniform vec3 boundingBoxLow;
 uniform vec3 boundingBoxHigh;
 uniform int numBoids;

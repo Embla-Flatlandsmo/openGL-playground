@@ -64,6 +64,7 @@ private:
     bool debug = true;
 
     void initParticles();
+    void countBucketSizes();
     void computePrefixSum();
     void computeReindexGrid();
     void initGridSorting();
