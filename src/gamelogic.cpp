@@ -98,7 +98,7 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 
 void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     buffer = new sf::SoundBuffer();
-    if (!buffer->loadFromFile("./res/Hall of the Mountain King.ogg")) {
+    if (!buffer->loadFromFile("../res/Hall of the Mountain King.ogg")) {
         return;
     }
 
@@ -114,7 +114,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
 
     camera = new Gloom::Camera();
     shader = new Gloom::Shader();
-    shader->makeBasicShader("./res/shaders/simple.vert", "./res/shaders/simple.frag");
+    shader->makeBasicShader("../res/shaders/simple.vert", "../res/shaders/simple.frag");
     shader->activate();
 
 

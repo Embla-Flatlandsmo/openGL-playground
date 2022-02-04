@@ -38,7 +38,7 @@ public:
     /**
      * @brief Grid resolution for spatial hashing
      */
-    glm::vec3 resolution;
+    glm::uvec3 resolution;
 
     /**
      * @brief Convenience variable for getting total amount of cells

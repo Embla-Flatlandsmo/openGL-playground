@@ -17,6 +17,7 @@
 
 void runProgram(GLFWwindow* window, CommandLineOptions options)
 {
+    glEnable(GL_DEBUG_OUTPUT);
     // Enable depth (Z) buffer (accept "closest" fragment)
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);

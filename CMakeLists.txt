@@ -8,8 +8,8 @@ project (openGL-playground)
 # Set python 3 name
 #
 set (PYTHON_3 "python")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "bin/")
-set(CMAKE_CURRENT_BINARY_DIR "bin/")
+# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "bin/")
+# set(CMAKE_CURRENT_BINARY_DIR "bin/")
 #
 # CMake setup
 #
@@ -131,8 +131,8 @@ target_link_libraries (${PROJECT_NAME}
 #                                                     ${CMAKE_CURRENT_BINARY_DIR}/res
 #                   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/res)
 
-add_custom_command(
-  TARGET ${PROJECT_NAME} POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy_directory 
-    ${CMAKE_CURRENT_SOURCE_DIR}/res
-    $<TARGET_FILE_DIR:${PROJECT_NAME}>/res)
+# add_custom_command(
+#   TARGET ${PROJECT_NAME} POST_BUILD
+#   COMMAND ${CMAKE_COMMAND} -E copy_directory 
+#     ${CMAKE_CURRENT_SOURCE_DIR}/res
+#     $<TARGET_FILE_DIR:${PROJECT_NAME}>/res)

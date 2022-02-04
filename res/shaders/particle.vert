@@ -8,7 +8,7 @@ in layout (location = 1) vec3 normal_in;
 in layout (location = 2) vec2 textureCoordinates_in;
 in layout (location = 3) vec4 pos;
 in layout (location = 4) vec4 vel;
-in layout (location = 5) vec4 col;
+in layout (location = 5) vec4 acc;
 
 out vec4 vert_color;
 
@@ -39,5 +39,5 @@ void main() {
 	mat4 rot = getRotationMat(vel.xyz);
 	vec3 rvert = vec3(rot * vec4(vert.xyz, 1.0f));
  	gl_Position = VP * vec4(particleSize*rvert + pos.xyz, 1.0);
-	vert_color = col;
+	vert_color = vec4(clamp(normalize(abs(vel.xyz)), vec3(0.2), vec3(1.0)), 1.0);
 }

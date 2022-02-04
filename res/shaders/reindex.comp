@@ -2,35 +2,39 @@
 
 layout( local_size_x = 128, local_size_y = 1, local_size_z = 1 ) in;
 
-layout(std430, binding=8) readonly buffer prefixSum
+layout(std140, binding=0) buffer particlePositions
 {
-    uint prefixSums[];
-};
-
-layout(std430, binding=9) buffer bucketSize
-{
-    uint bucketSizes[];
+    vec4 Positions[];
 };
 
 layout(std430, binding=3) buffer particleIndex
 {
     uint particleIndices[];
 };
-layout(std140, binding=0) buffer particlePositions
+
+layout(std430, binding=4) readonly buffer prefixSum
 {
-    vec4 Positions[];
+    uint prefixSums[];
 };
+
+layout(std430, binding=5) buffer bucketSize
+{
+    uint bucketSizes[];
+};
+
 
 uniform vec3 boundingBoxLow;
 uniform vec3 boundingBoxHigh;
-uniform vec3 gridRes;
+uniform uvec3 gridRes;
 
 void main(void) {
     uint gid = gl_GlobalInvocationID.x;
+
     vec3 diagonal = boundingBoxHigh-boundingBoxLow;
     vec3 range = diagonal/gridRes;
     uvec3 vgridIdx = uvec3((Positions[gid].xyz-boundingBoxLow)/range);
     uint cellIdx =  uint(gridRes.x * gridRes.y * vgridIdx.z + gridRes.x * vgridIdx.y + vgridIdx.x);
+    
     uint particleIdx = prefixSums[cellIdx]+atomicAdd(bucketSizes[cellIdx],-1)-1;
     particleIndices[particleIdx]=gid;
 }

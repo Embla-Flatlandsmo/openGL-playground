@@ -63,7 +63,19 @@ GLFWwindow* initialise()
     printf("GLFW\t %s\n", glfwGetVersionString());
     printf("OpenGL\t %s\n", glGetString(GL_VERSION));
     printf("GLSL\t %s\n\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
+    
+    int32_t gsx, gsy, gsz, gcx, gcy, gcz, inv;
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &gsx);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, &gsy);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, &gsz);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &gcx);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, &gcy);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, &gcz);
+    glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &inv);
 
+    printf("Max work group size %i %i %i\n", gsx, gsy, gsz);
+    printf("Max work group count %i %i %i\n",gcx, gcy, gcz);
+    printf("Max invocations      %i\n", inv);
     return window;
 }
 

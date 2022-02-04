@@ -36,15 +36,16 @@ private:
     BoundingBox* boundingBox;
     GLuint particlePosSSBO;
     GLuint particleVelSSBO;
-    GLuint particleColSSBO;
+    GLuint particleAccSSBO;
     GLuint particleVAO;
 
     struct pos *particlePoints;
     struct vel *particleVels;
-    struct color *particleCols;
+    struct color *particleAccs;
 
     Gloom::Shader *colorShader;
     Gloom::Shader *computeShader;
+    Gloom::Shader *forceShader;
 
 
     GLuint prefixSumsLoc;
@@ -57,6 +58,7 @@ private:
     Gloom::Shader *prefixSumShader;
     Gloom::Shader *gridBucketsShader;
     Gloom::Shader *reindexShader;
+
 
     Mesh* particleModel;
     float particleSize;

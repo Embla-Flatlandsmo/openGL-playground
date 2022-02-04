@@ -19,23 +19,23 @@
 
 ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
 {
-    particleModel = new Mesh(loadObj("./res/models/boid.obj"));
+    particleModel = new Mesh(loadObj("../res/models/boid.obj"));
     particleSize = 0.5;
     boundingBox = new BoundingBox(low, high);
 
     particlePoints = new struct pos[NUM_PARTICLES];
     particleVels = new struct vel[NUM_PARTICLES];
-    particleCols = new struct color[NUM_PARTICLES];
+    particleAccs = new struct color[NUM_PARTICLES];
 
     colorShader = new Gloom::Shader();
-    colorShader->makeBasicShader("res/shaders/particle.vert", "res/shaders/particle.frag");
+    colorShader->makeBasicShader("../res/shaders/particle.vert", "../res/shaders/particle.frag");
     colorShader->activate();
     glUniform1f(colorShader->getUniformFromName("particleSize"), particleSize);
     colorShader->deactivate();
 
     // The compute shader must be in its own program
     computeShader = new Gloom::Shader();
-    computeShader->attach("res/shaders/particle.comp");
+    computeShader->attach("../res/shaders/particle.comp");
     computeShader->link();
 
     // We set the uniforms for the bounding box in the compute shader only once
@@ -43,7 +43,22 @@ ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
     glUniform3fv(computeShader->getUniformFromName("boundingBoxLow"), 1, glm::value_ptr(boundingBox->low));
     glUniform3fv(computeShader->getUniformFromName("boundingBoxHigh"), 1, glm::value_ptr(boundingBox->high));
     glUniform1i(computeShader->getUniformFromName("numBoids"), NUM_PARTICLES);
+    glUniform3uiv(computeShader->getUniformFromName("gridRes"), 1, glm::value_ptr(boundingBox->resolution));
+
     computeShader->deactivate();
+
+    forceShader = new Gloom::Shader();
+    forceShader->attach("../res/shaders/computeForce.comp");
+    forceShader->link();
+
+    // We set the uniforms for the bounding box in the compute shader only once
+    forceShader->activate();
+    glUniform3fv(forceShader->getUniformFromName("boundingBoxLow"), 1, glm::value_ptr(boundingBox->low));
+    glUniform3fv(forceShader->getUniformFromName("boundingBoxHigh"), 1, glm::value_ptr(boundingBox->high));
+    glUniform1i(forceShader->getUniformFromName("numBoids"), NUM_PARTICLES);
+    glUniform3uiv(forceShader->getUniformFromName("gridRes"), 1, glm::value_ptr(boundingBox->resolution));
+    forceShader->deactivate();
+
     initParticles();
     initGridSorting();
 }
@@ -60,12 +75,25 @@ void ParticleSystem::update()
     countBucketSizes();
     computePrefixSum();
     computeReindexGrid();
-    computeShader->activate();
 
+    forceShader->activate();
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particlePosSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, particleVelSSBO);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, particleColSSBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, particleAccSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, particleIndicesLoc);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, prefixSumsLoc);
+    // glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, bucketSizesLoc);
+    glDispatchCompute(NUM_PARTICLES/WORK_GROUP_SIZE, 1, 1);
+    glMemoryBarrier(GL_ALL_BARRIER_BITS);
+    forceShader->deactivate();
+
+    computeShader->activate();
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particlePosSSBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, particleVelSSBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, particleAccSSBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, particleIndicesLoc);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, prefixSumsLoc);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, bucketSizesLoc);
     glDispatchCompute(NUM_PARTICLES/WORK_GROUP_SIZE, 1, 1);
     glMemoryBarrier(GL_ALL_BARRIER_BITS);
     computeShader->deactivate();
@@ -150,16 +178,19 @@ void ParticleSystem::initParticles()
     glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
     // Colors
-    glGenBuffers(1, &particleColSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, particleColSSBO);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, NUM_PARTICLES * sizeof(struct color), particleCols, GL_DYNAMIC_COPY);
-    particleCols = (struct color *)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, NUM_PARTICLES * sizeof(struct color), bufMask);
+    glGenBuffers(1, &particleAccSSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, particleAccSSBO);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, NUM_PARTICLES * sizeof(struct color), particleAccs, GL_DYNAMIC_COPY);
+    particleAccs = (struct color *)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, NUM_PARTICLES * sizeof(struct color), bufMask);
     for (int i = 0; i < NUM_PARTICLES; i++)
     {
-        particleCols[i].r = abs(particleVels[i].vx/MAX_VELOCITY);
-        particleCols[i].g = abs(particleVels[i].vy/MAX_VELOCITY);
-        particleCols[i].b = abs(particleVels[i].vz/MAX_VELOCITY);
-        particleCols[i].a = 1.0;
+        // particleAccs[i].r = abs(particleVels[i].vx/MAX_VELOCITY);
+        // particleAccs[i].g = abs(particleVels[i].vy/MAX_VELOCITY);
+        // particleAccs[i].b = abs(particleVels[i].vz/MAX_VELOCITY);
+        particleAccs[i].r = 0.0;
+        particleAccs[i].g = 0.0;
+        particleAccs[i].b = 0.0;
+        particleAccs[i].a = 1.0;
     }
     glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
@@ -187,7 +218,7 @@ void ParticleSystem::initParticles()
     glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
     glVertexAttribDivisor(4,1);
 
-    glBindBuffer(GL_ARRAY_BUFFER, particleColSSBO);
+    glBindBuffer(GL_ARRAY_BUFFER, particleAccSSBO);
     glEnableVertexAttribArray(5);
     glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
     glVertexAttribDivisor(5,1);
@@ -196,17 +227,40 @@ void ParticleSystem::initParticles()
 
 void ParticleSystem::initGridSorting() 
 {
+    prefixSumShader = new Gloom::Shader();
+    prefixSumShader->attach("../res/shaders/prefixSum.comp");
+    prefixSumShader->link();
+
+    gridBucketsShader = new Gloom::Shader();
+    gridBucketsShader->attach("../res/shaders/gridBuckets.comp");
+    gridBucketsShader->link();
+    gridBucketsShader->activate();
+    glUniform3fv(gridBucketsShader->getUniformFromName("boundingBoxLow"), 1, glm::value_ptr(boundingBox->low));
+    glUniform3fv(gridBucketsShader->getUniformFromName("boundingBoxHigh"), 1, glm::value_ptr(boundingBox->high));
+    glUniform3uiv(gridBucketsShader->getUniformFromName("gridRes"), 1, glm::value_ptr(boundingBox->resolution));
+    gridBucketsShader->deactivate();
+    
+    reindexShader = new Gloom::Shader();
+    reindexShader->attach("../res/shaders/reindex.comp");
+    reindexShader->link();
+    reindexShader->activate();
+    glUniform3fv(reindexShader->getUniformFromName("boundingBoxLow"), 1, glm::value_ptr(boundingBox->low));
+    glUniform3fv(reindexShader->getUniformFromName("boundingBoxHigh"), 1, glm::value_ptr(boundingBox->high));
+    glUniform3uiv(reindexShader->getUniformFromName("gridRes"), 1, glm::value_ptr(boundingBox->resolution));
+    reindexShader->deactivate();
+
+
     GLint bufMask = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
-    const uint32_t numCells = this->boundingBox->numCells;
-    prefixSums = new GLuint[this->boundingBox->numCells];
-    bucketSizes = new GLuint[this->boundingBox->numCells];
+    const uint32_t numCells = boundingBox->numCells;
+    prefixSums = new GLuint[numCells];
+    bucketSizes = new GLuint[numCells];
     particleIndices = new GLuint[NUM_PARTICLES];
 
     glGenBuffers(1, &prefixSumsLoc);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, prefixSumsLoc);
     glBufferData(GL_SHADER_STORAGE_BUFFER, numCells * sizeof(GLuint), prefixSums, GL_DYNAMIC_COPY);
     prefixSums = (GLuint*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, numCells * sizeof(GLuint), bufMask);
-    for (int i = 0; i < numCells; i++)
+    for (uint32_t i = 0; i < numCells; i++)
     {
         prefixSums[i]=0;
     }
@@ -216,14 +270,14 @@ void ParticleSystem::initGridSorting()
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, bucketSizesLoc);
     glBufferData(GL_SHADER_STORAGE_BUFFER, numCells * sizeof(GLuint), bucketSizes, GL_DYNAMIC_COPY);
     bucketSizes = (GLuint*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, numCells * sizeof(GLuint), bufMask);
-    for (int i = 0; i < numCells; i++)
+    for (uint32_t i = 0; i < numCells; i++)
     {
         bucketSizes[i]=0;
     }
     glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
     glGenBuffers(1, &particleIndicesLoc);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER,particleIndicesLoc);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, particleIndicesLoc);
     glBufferData(GL_SHADER_STORAGE_BUFFER, NUM_PARTICLES * sizeof(GLuint), particleIndices, GL_DYNAMIC_COPY);
     particleIndices = (GLuint*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, NUM_PARTICLES * sizeof(GLuint), bufMask);
     for (int i = 0; i < NUM_PARTICLES; i++)
@@ -232,59 +286,70 @@ void ParticleSystem::initGridSorting()
     }
     glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
-    prefixSumShader = new Gloom::Shader();
-    prefixSumShader->attach("res/shaders/prefixSum.comp");
-    prefixSumShader->link();
-
-    gridBucketsShader = new Gloom::Shader();
-    gridBucketsShader->attach("res/shaders/gridBuckets.comp");
-    gridBucketsShader->link();
-
-    reindexShader = new Gloom::Shader();
-    reindexShader->attach("res/shaders/reindex.comp");
-    reindexShader->link();
-    reindexShader->activate();
-    glUniform3fv(reindexShader->getUniformFromName("boundingBoxLow"), 1, glm::value_ptr(boundingBox->low));
-    glUniform3fv(reindexShader->getUniformFromName("boundingBoxHigh"), 1, glm::value_ptr(boundingBox->high));
-    glUniform3fv(reindexShader->getUniformFromName("gridRes"), 1, glm::value_ptr(boundingBox->resolution));
-    reindexShader->deactivate();
-
 }
 
 
 void ParticleSystem::countBucketSizes() {
     gridBucketsShader->activate();
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particlePosSSBO);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 9, bucketSizesLoc);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, bucketSizesLoc);
     glDispatchCompute(NUM_PARTICLES/WORK_GROUP_SIZE, 1, 1);
     glMemoryBarrier(GL_ALL_BARRIER_BITS);
     gridBucketsShader->deactivate();
+    // uint32_t arraySize = sizeof(GLuint)*(boundingBox->numCells);
+    // glBindBuffer(GL_SHADER_STORAGE_BUFFER, bucketSizesLoc);
+    // GLuint* sizes = (GLuint*)glMapNamedBufferRange(bucketSizesLoc, 0, arraySize, GL_MAP_READ_BIT);
+    // memcpy(bucketSizes, sizes, arraySize);
+    // glUnmapNamedBuffer(bucketSizesLoc);
+    // glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    // for (int i = 0; i < boundingBox->numCells; i++) {
+    //     if (bucketSizes[i] > NUM_PARTICLES) {
+    //         printf("Bucket size at [%i] is %i\n", i, bucketSizes[i]);
+    //     }
+    // }
+    // printf("BucketSizes[100]=%i\n", bucketSizes[100]);
+    // prefixSumShader->deactivate();
 }
 
 void ParticleSystem::computePrefixSum() {
 
     prefixSumShader->activate();
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, prefixSumsLoc);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 9, bucketSizesLoc);
+
+    glUniform1ui(prefixSumShader->getUniformFromName("numCells"), boundingBox->numCells);
     uint32_t chunkSize = 2;
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, prefixSumsLoc);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, bucketSizesLoc);
     do
     {
         glUniform1ui(prefixSumShader->getUniformFromName("chunkSize"), chunkSize);
-        glDispatchCompute(this->boundingBox->numCells/WORK_GROUP_SIZE, 1, 1);
+        glDispatchCompute((boundingBox->numCells)/WORK_GROUP_SIZE, 1, 1);
         glMemoryBarrier(GL_ALL_BARRIER_BITS);
         chunkSize *= 2;
-    } while (chunkSize <= this->boundingBox->numCells);
+    } while (chunkSize <= boundingBox->numCells);
 
+    // // Noe er galt med prefix sum!!!
+    // // Fungerer for numCells=512
+    uint32_t arraySize = sizeof(GLuint)*(boundingBox->numCells);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, prefixSumsLoc);
+    GLuint* sums = (GLuint*)glMapNamedBufferRange(prefixSumsLoc, 0, arraySize, GL_MAP_READ_BIT);
+    memcpy(prefixSums, sums, arraySize);
+    glUnmapNamedBuffer(prefixSumsLoc);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    printf("PrefixSum[%d]: %d\n",boundingBox->numCells-1,prefixSums[boundingBox->numCells-1]);
+    printf("Num particles: %i\n", NUM_PARTICLES);
     prefixSumShader->deactivate();
+    
 }
 
 void ParticleSystem::computeReindexGrid() {
     reindexShader->activate();
 
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, particlePosSSBO);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, prefixSumsLoc);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 9, bucketSizesLoc);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 10, particleIndicesLoc);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particlePosSSBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, particleIndicesLoc);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, prefixSumsLoc);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, bucketSizesLoc);
+
 
     glDispatchCompute(NUM_PARTICLES/WORK_GROUP_SIZE, 1, 1);
     glMemoryBarrier(GL_ALL_BARRIER_BITS);

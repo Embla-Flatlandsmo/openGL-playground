@@ -12,36 +12,30 @@ layout(std140, binding=1) buffer Vel
     vec4 Velocities[];
 };
 
-layout(std140, binding=2) buffer Col
+layout(std140, binding=2) readonly buffer Acc
 {
-    vec4 Colors[];
+    vec4 Accelerations[];
 };
 
-layout(std430, binding=3) readonly buffer particleIndex
+layout(std430, binding=5) buffer bucketSize
 {
-    uint particleIndices[];
-};
-
-layout(std430, binding=8) readonly buffer prefixSum
-{
-    uint prefixSums[];
+    uint bucketSizes[];
 };
 
 uniform vec3 boundingBoxLow;
 uniform vec3 boundingBoxHigh;
+uniform uvec3 gridRes;
 uniform int numBoids;
 
 const float DT = 0.1;
-const float cohesion_factor = 0.01;
-const float separation_range = 1.0;
-const float alignment_factor = 0.125;
-const float view_range = 3.0;
 const float max_vel = 2.0;
+vec3 diagonal = boundingBoxHigh-boundingBoxLow;
 
 struct boid_t
 {
     vec3 pos;
     vec3 vel;
+    vec3 acc;
 };
 
 float vecLen (vec3 v)
@@ -61,121 +55,58 @@ vec3 limit(vec3 v, float limit){
     return v;
 }
 
-boid_t get_boid(uint gid) {
+boid_t get_boid(uint i) {
     boid_t b;
-    b.pos = Positions[gid].xyz;
-    b.vel = Velocities[gid].xyz;
+    b.pos = Positions[i].xyz;
+    b.vel = Velocities[i].xyz;
+    b.acc = Accelerations[i].xyz;
     return b;
 }
 
-void update_boid(uint gid, boid_t b) {
-    Positions[gid].xyz = b.pos;
-    Velocities[gid].xyz = b.vel;
-}
-
-// For explanation, see http://www.vergenet.net/~conrad/boids/pseudocode.html
-vec3 separation(uint gid) {
-    vec3 c = vec3(0.f);
-    boid_t current_boid = get_boid(gid);
-    for (uint i = 1; i < numBoids; i++) {
-        uint otherID = (gid+i)%numBoids;
-        boid_t other_boid = get_boid(otherID);
-        float dist = distance(other_boid.pos, current_boid.pos);
-        if (dist < view_range && dist < separation_range) {
-            c -= (other_boid.pos-current_boid.pos);
-        }
-
-    }
-    return c;
-}
-
-vec3 alignment(uint gid) {
-    boid_t current_boid = get_boid(gid);
-    vec3 v = current_boid.vel;
-    uint num_boids_affecting = 0;
-    for (uint i = 1; i < numBoids; i++) {
-        uint otherID = (gid+i)%numBoids;
-        boid_t other_boid = get_boid(otherID);
-        if (distance(other_boid.pos, current_boid.pos) < view_range) {
-            v += other_boid.vel;
-            num_boids_affecting++;
-        }
-
-    }
-    if (num_boids_affecting == 0) return vec3(0.f);
-    v /= num_boids_affecting;
-    return v*alignment_factor;
-}
-
-vec3 cohesion(uint gid) {
-    boid_t current_boid = get_boid(gid);
-    vec3 flock_center = vec3(0.f);
-    uint num_boids_affecting = 0;
-    for (uint i = 1; i < numBoids; i++) {
-        uint otherID = (gid+i)%numBoids;
-        boid_t other_boid = get_boid(otherID);
-        if (distance(other_boid.pos, current_boid.pos) < view_range) {
-            flock_center += other_boid.pos;
-            num_boids_affecting++;
-        }
-
-    }
-    if (num_boids_affecting == 0) return flock_center;
-    flock_center /= num_boids_affecting;
-    return (flock_center-current_boid.pos)*cohesion_factor;
+void update_boid(uint i, boid_t b) {
+    Positions[i].xyz = b.pos;
+    Velocities[i].xyz = b.vel;
+    // Accelerations[i].xyz = b.acc;
 }
 
 void main() {
     uint gid = gl_GlobalInvocationID.x;
-    uint particleIndex = particleIndices[gid];
-    boid_t current_boid = get_boid(particleIndex);
+    if (gid > numBoids) {
+        return;
+    }
 
-    vec3 diagonal = boundingBoxHigh-boundingBoxLow;
+    boid_t current_boid = get_boid(gid);
 
-    vec3 coh = cohesion(particleIndex);
-    vec3 sep = separation(particleIndex);
-    vec3 alig = alignment(particleIndex);
-    current_boid.vel += coh+sep+alig;
+    current_boid.vel += current_boid.acc*DT;
     current_boid.vel = limit(current_boid.vel, max_vel);
+
+    // current_boid.pos = mod(((current_boid.pos + current_boid.vel*DT) - boundingBoxLow + diagonal), diagonal) + boundingBoxLow;
+    
     current_boid.pos += current_boid.vel*DT;
-
-    // TODO: Find some way to do this without conditional branching 
-    // (I think it's bad for performance?)
-    // WRAP AROUND
-    // if (current_boid.pos.x < boundingBoxLow.x) {
-    //     current_boid.pos.x += diagonal.x;
-    // } else if (current_boid.pos.x > boundingBoxHigh.x) {
-    //     current_boid.pos.x -= -diagonal.x;
-    // }
-    // if (current_boid.pos.y < boundingBoxLow.y) {
-    //     current_boid.pos.y += diagonal.y;
-    // } else if (current_boid.pos.y > boundingBoxHigh.y) {
-    //     current_boid.pos.y -= -diagonal.y;
-    // }
-    // if (current_boid.pos.z < boundingBoxLow.z) {
-    //     current_boid.pos.z += diagonal.z;
-    // } else if (current_boid.pos.z > boundingBoxHigh.z) {
-    //     current_boid.pos.z -= -diagonal.z;
-    // }
-
     // BOUNCE
     if ((current_boid.pos.x < boundingBoxLow.x) && (current_boid.vel.x < 0.0)) {
         current_boid.vel.x *= -1;
+        current_boid.pos.x += current_boid.vel.x*DT;
     } else if ((current_boid.pos.x > boundingBoxHigh.x) && (current_boid.vel.x >= 0.0)) {
         current_boid.vel.x *= -1;
+        current_boid.pos.x += current_boid.vel.x*DT;
     }
 
     if ((current_boid.pos.y < boundingBoxLow.y) && (current_boid.vel.y < 0.0)) {
         current_boid.vel.y *= -1;
+        current_boid.pos.y += current_boid.vel.y*DT;
     } else if ((current_boid.pos.y > boundingBoxHigh.y) && (current_boid.vel.y >= 0.0)) {
         current_boid.vel.y *= -1;
+        current_boid.pos.y += current_boid.vel.y*DT;
     }
 
     if ((current_boid.pos.z < boundingBoxLow.z) && (current_boid.vel.z < 0.0)) {
         current_boid.vel.z *= -1;
+        current_boid.pos.z += current_boid.vel.z*DT;
     } else if ((current_boid.pos.z > boundingBoxHigh.z) && (current_boid.vel.z >= 0.0)) {
         current_boid.vel.z *= -1;
+        current_boid.pos.z += current_boid.vel.z*DT;
     }
     
-    update_boid(particleIndex, current_boid);
+    update_boid(gid, current_boid);
 }
