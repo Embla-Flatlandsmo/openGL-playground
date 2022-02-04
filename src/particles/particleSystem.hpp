@@ -46,10 +46,25 @@ private:
     Gloom::Shader *colorShader;
     Gloom::Shader *computeShader;
 
+
+    GLuint prefixSumsLoc;
+    GLuint particleIndicesLoc;
+    GLuint bucketSizesLoc;
+    GLuint *prefixSums;
+    GLuint *particleIndices;
+    GLuint *bucketSizes;
+
+    Gloom::Shader *prefixSumShader;
+    Gloom::Shader *gridBucketsShader;
+    Gloom::Shader *reindexShader;
+
     Mesh* particleModel;
     float particleSize;
 
     bool debug = true;
 
     void initParticles();
+    void computePrefixSum();
+    void computeReindexGrid();
+    void initGridSorting();
 };

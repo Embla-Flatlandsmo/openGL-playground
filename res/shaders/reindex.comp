@@ -1,0 +1,27 @@
+layout(std430, binding=8) readonly buffer prefixSum
+{
+    uint prefixSums[];
+};
+
+layout(std430, binding=9) buffer bucketSize
+{
+    uint bucketSizes[];
+};
+
+layout(std430, binding=10) buffer particleIndex
+{
+    uint particleIndices[];
+};
+layout(std140, binding=4) buffer particlePositions
+{
+    uint Positions[];
+};
+
+void main(void) {
+    uint gid = gl_GlobalInvocationID.x;
+    vec3 diagonal = boundingBoxHigh-boundingBoxLow;
+    vec3 range = diagonal/gridRes;
+    uint gridIdx = uvec3((Positions[gid]-boundingBoxLow)/range);
+    uint particleIdx = prefixSums[gridIdx]+atomicDecrement(bucketSizes[gridIdx])
+    particleIndices[particleIdx]=gid
+}

@@ -2,19 +2,24 @@
 
 layout( local_size_x = 128, local_size_y = 1, local_size_z = 1 ) in;
 
-layout(std140, binding=4) buffer Pos
+layout(std140, binding=0) buffer Pos
 {
     vec4 Positions[];
 };
 
-layout(std140, binding=5) buffer Vel
+layout(std140, binding=1) buffer Vel
 {
     vec4 Velocities[];
 };
 
-layout(std140, binding=6) buffer Col
+layout(std140, binding=2) buffer Col
 {
     vec4 Colors[];
+};
+
+layout(std430, binding=3) readonly buffer particleIndex
+{
+    uint particleIndices[];
 };
 
 uniform vec3 boundingBoxLow;
@@ -117,17 +122,38 @@ vec3 cohesion(uint gid) {
 
 void main() {
     uint gid = gl_GlobalInvocationID.x;
-    boid_t current_boid = get_boid(gid);
+    uint particleIndex = particleIndices[gid];
+    boid_t current_boid = get_boid(particleIndex);
 
-    vec3 coh = cohesion(gid);
-    vec3 sep = separation(gid);
-    vec3 alig = alignment(gid);
+    vec3 diagonal = boundingBoxHigh-boundingBoxLow;
+
+    vec3 coh = cohesion(particleIndex);
+    vec3 sep = separation(particleIndex);
+    vec3 alig = alignment(particleIndex);
     current_boid.vel += coh+sep+alig;
     current_boid.vel = limit(current_boid.vel, max_vel);
     current_boid.pos += current_boid.vel*DT;
 
     // TODO: Find some way to do this without conditional branching 
     // (I think it's bad for performance?)
+    // WRAP AROUND
+    // if (current_boid.pos.x < boundingBoxLow.x) {
+    //     current_boid.pos.x += diagonal.x;
+    // } else if (current_boid.pos.x > boundingBoxHigh.x) {
+    //     current_boid.pos.x -= -diagonal.x;
+    // }
+    // if (current_boid.pos.y < boundingBoxLow.y) {
+    //     current_boid.pos.y += diagonal.y;
+    // } else if (current_boid.pos.y > boundingBoxHigh.y) {
+    //     current_boid.pos.y -= -diagonal.y;
+    // }
+    // if (current_boid.pos.z < boundingBoxLow.z) {
+    //     current_boid.pos.z += diagonal.z;
+    // } else if (current_boid.pos.z > boundingBoxHigh.z) {
+    //     current_boid.pos.z -= -diagonal.z;
+    // }
+
+    // BOUNCE
     if ((current_boid.pos.x < boundingBoxLow.x) && (current_boid.vel.x < 0.0)) {
         current_boid.vel.x *= -1;
     } else if ((current_boid.pos.x > boundingBoxHigh.x) && (current_boid.vel.x >= 0.0)) {
@@ -146,5 +172,5 @@ void main() {
         current_boid.vel.z *= -1;
     }
     
-    update_boid(gid, current_boid);
+    update_boid(particleIndex, current_boid);
 }

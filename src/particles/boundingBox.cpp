@@ -82,7 +82,8 @@ BoundingBox::BoundingBox(glm::vec3 low, glm::vec3 high)
 {
     this->low = low;
     this->high = high;
-
+    this->resolution = glm::vec3(100,100,100);
+    numCells = this->resolution.x*this->resolution.y*this->resolution.z;
     boxShader = new Gloom::Shader();
     boxShader->makeBasicShader("res/shaders/box.vert", "res/shaders/box.frag");
     Mesh box = generateBoundingBoxMesh(high-low);

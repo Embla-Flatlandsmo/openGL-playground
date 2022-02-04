@@ -35,6 +35,15 @@ public:
      * @brief Maximal coordinates of bounding box
      */
     glm::vec3 high;
+    /**
+     * @brief Grid resolution for spatial hashing
+     */
+    glm::vec3 resolution;
+
+    /**
+     * @brief Convenience variable for getting total amount of cells
+     */
+    uint32_t numCells;
 
 private:
     /**

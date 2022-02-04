@@ -1,0 +1,31 @@
+#version 430 
+
+layout( local_size_x = 128, local_size_y = 1, local_size_z = 1 ) in;
+
+
+layout(std430, binding=8) buffer prefixSum
+{
+    uint prefixSums[];
+};
+
+layout(std430, binding=9) buffer bucketSize
+{
+    uint bucketSizes[];
+};
+
+layout(location=1) uniform uint chunkSize;
+
+void main(void) {
+    uint gid = gl_GlobalInvocationID.x;
+    uint stepLength = chunkSize >> 1;
+
+    if (stepLength == 1) {
+        // Initial condition, copy bucket sizes to prefix sum
+        // TODO: see if this can be done with memcpy on CPU to prevent checking.
+        prefixSums[gid] = bucketSizes[gid]
+    }
+    if (gid - stepLength<0) {
+        return;
+    }
+    prefixSums[gid] += prefixSums[gid-stepLength];
+}
