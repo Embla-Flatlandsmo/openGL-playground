@@ -7,7 +7,7 @@
 #include <utilities/shader.hpp>
 #include <utilities/mesh.h>
 
-#define NUM_PARTICLES 1024*2
+#define NUM_PARTICLES 1024
 struct pos
 {
     float x, y, z, w;
@@ -18,9 +18,9 @@ struct vel
     float vx, vy, vz, vw;
 };
 
-struct color
+struct acc
 {
-    float r, g, b, a;
+    float ax, ay, az, aw;
 };
 
 class ParticleSystem
@@ -41,7 +41,7 @@ private:
 
     struct pos *particlePoints;
     struct vel *particleVels;
-    struct color *particleAccs;
+    struct acc *particleAccs;
 
     Gloom::Shader *colorShader;
     Gloom::Shader *computeShader;

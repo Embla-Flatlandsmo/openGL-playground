@@ -86,12 +86,7 @@ Mesh loadObj(std::string const &filename)
 
         out_vertexIndices.push_back(i);
     }
-    printf("Obj file loaded with out_vertex=%d", out_vertices.size());
-    // Print various OpenGL information to stdout
-    // printf("%s: %s\n", glGetString(GL_VENDOR), glGetString(GL_RENDERER));
-    // printf("GLFW\t %s\n", glfwGetVersionString());
-    // printf("OpenGL\t %s\n", glGetString(GL_VERSION));
-    // printf("GLSL\t %s\n\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
+    printf("Obj file loaded with out_vertex=%d\n", out_vertices.size());
 
     Mesh m;
     m.vertices = out_vertices;

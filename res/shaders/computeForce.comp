@@ -1,6 +1,6 @@
 #version 430
 
-layout( local_size_x = 128, local_size_y = 1, local_size_z = 1 ) in;
+layout( local_size_x = 1024, local_size_y = 1, local_size_z = 1 ) in;
 
 layout(std140, binding=0) readonly buffer Pos
 {
@@ -35,9 +35,9 @@ uniform int numBoids;
 
 const float cohesion_factor = 0.01;
 const float separation_range = 1.0;
-const float separation_factor = 0.6;
+const float separation_factor = 1.0;
 const float alignment_factor = 0.125;
-const float boundary_avoidance_factor = 0.2;
+const float boundary_avoidance_factor = 0.01;
 const float view_range = 3.0;
 vec3 separation_vector = vec3(0.f);
 vec3 alignment_vector = vec3(0.f);
@@ -235,4 +235,5 @@ void main() {
     }
 
     Accelerations[currentParticleIndex].xyz = current_boid.acc;
+    Accelerations[currentParticleIndex].w = num_in_range;
 }
