@@ -27,8 +27,10 @@ uniform vec3 boundingBoxHigh;
 uniform uvec3 gridRes;
 uniform int numBoids;
 
-const float DT = 1.0;
-const float max_vel = 0.3;
+uniform float DT;
+uniform float max_vel;
+// const float DT = 1.0;
+// const float max_vel = 0.3;
 vec3 diagonal = boundingBoxHigh-boundingBoxLow;
 
 struct boid_t
@@ -80,37 +82,37 @@ void main() {
     current_boid.vel += current_boid.acc*DT;
     current_boid.vel = limit(current_boid.vel, max_vel);
 
-    // current_boid.pos = mod(((current_boid.pos + current_boid.vel*DT) - boundingBoxLow + diagonal), diagonal) + boundingBoxLow;
+    current_boid.pos = mod(((current_boid.pos + current_boid.vel*DT) - boundingBoxLow + diagonal), diagonal) + boundingBoxLow;
     
-    current_boid.pos += current_boid.vel*DT;
-    // BOUNCE
-    if ((current_boid.pos.x < boundingBoxLow.x) && (current_boid.vel.x < 0.0)) {
-        current_boid.vel.x *= -1;
-        current_boid.pos.x += current_boid.vel.x*DT;
-    } else if ((current_boid.pos.x > boundingBoxHigh.x) && (current_boid.vel.x >= 0.0)) {
-        current_boid.vel.x *= -1;
-        current_boid.pos.x += current_boid.vel.x*DT;
-    }
+    // current_boid.pos += current_boid.vel*DT;
+    // // BOUNCE
+    // if ((current_boid.pos.x < boundingBoxLow.x) && (current_boid.vel.x < 0.0)) {
+    //     current_boid.vel.x *= -1;
+    //     current_boid.pos.x += current_boid.vel.x*DT;
+    // } else if ((current_boid.pos.x > boundingBoxHigh.x) && (current_boid.vel.x >= 0.0)) {
+    //     current_boid.vel.x *= -1;
+    //     current_boid.pos.x += current_boid.vel.x*DT;
+    // }
 
-    if ((current_boid.pos.y < boundingBoxLow.y) && (current_boid.vel.y < 0.0)) {
-        current_boid.vel.y *= -1;
-        current_boid.pos.y += current_boid.vel.y*DT;
-    } else if ((current_boid.pos.y > boundingBoxHigh.y) && (current_boid.vel.y >= 0.0)) {
-        current_boid.vel.y *= -1;
-        current_boid.pos.y += current_boid.vel.y*DT;
-    }
+    // if ((current_boid.pos.y < boundingBoxLow.y) && (current_boid.vel.y < 0.0)) {
+    //     current_boid.vel.y *= -1;
+    //     current_boid.pos.y += current_boid.vel.y*DT;
+    // } else if ((current_boid.pos.y > boundingBoxHigh.y) && (current_boid.vel.y >= 0.0)) {
+    //     current_boid.vel.y *= -1;
+    //     current_boid.pos.y += current_boid.vel.y*DT;
+    // }
 
-    if ((current_boid.pos.z < boundingBoxLow.z) && (current_boid.vel.z < 0.0)) {
-        current_boid.vel.z *= -1;
-        current_boid.pos.z += current_boid.vel.z*DT;
-    } else if ((current_boid.pos.z > boundingBoxHigh.z) && (current_boid.vel.z >= 0.0)) {
-        current_boid.vel.z *= -1;
-        current_boid.pos.z += current_boid.vel.z*DT;
-    }
+    // if ((current_boid.pos.z < boundingBoxLow.z) && (current_boid.vel.z < 0.0)) {
+    //     current_boid.vel.z *= -1;
+    //     current_boid.pos.z += current_boid.vel.z*DT;
+    // } else if ((current_boid.pos.z > boundingBoxHigh.z) && (current_boid.vel.z >= 0.0)) {
+    //     current_boid.vel.z *= -1;
+    //     current_boid.pos.z += current_boid.vel.z*DT;
+    // }
     
     update_boid(gid, current_boid);
-    vec3 range = diagonal/gridRes;
-    uvec3 vgridIdx = uvec3((current_boid.pos-boundingBoxLow)/range);
-    uint cellIdx =  uint(gridRes.x * gridRes.y * vgridIdx.z + gridRes.x * vgridIdx.y + vgridIdx.x);
-    atomicAdd(bucketSizes[cellIdx], 1);
+    // vec3 range = diagonal/gridRes;
+    // uvec3 vgridIdx = uvec3((current_boid.pos-boundingBoxLow)/range);
+    // uint cellIdx =  uint(gridRes.x * gridRes.y * vgridIdx.z + gridRes.x * vgridIdx.y + vgridIdx.x);
+    // atomicAdd(bucketSizes[cellIdx], 1);
 }

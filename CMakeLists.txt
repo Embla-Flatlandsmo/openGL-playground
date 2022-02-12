@@ -79,7 +79,8 @@ include_directories (src/
                      lib/glm/
                      lib/stb/
                      lib/arrrgh/
-                     lib/SFML/include/)
+                     lib/SFML/include/
+                     lib/imgui/)
 
 
 #

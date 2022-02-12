@@ -21,7 +21,7 @@
 ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
 {
     particleModel = new Mesh(loadObj("../res/models/boid.obj"));
-    particleSize = 0.5;
+
     boundingBox = new BoundingBox(low, high);
 
     particlePoints = new struct pos[NUM_PARTICLES];
@@ -30,9 +30,6 @@ ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
 
     colorShader = new Gloom::Shader();
     colorShader->makeBasicShader("../res/shaders/particle.vert", "../res/shaders/particle.frag");
-    colorShader->activate();
-    glUniform1f(colorShader->getUniformFromName("particleSize"), particleSize);
-    colorShader->deactivate();
 
     // The compute shader must be in its own program
     computeShader = new Gloom::Shader();
@@ -73,11 +70,16 @@ ParticleSystem::~ParticleSystem()
 
 void ParticleSystem::update()
 {
-    // countBucketSizes();
+    countBucketSizes();
     computePrefixSum();
     computeReindexGrid();
 
     forceShader->activate();
+    glUniform1f(forceShader->getUniformFromName("cohesion_factor"), boidProperties.cohesion_factor);
+    glUniform1f(forceShader->getUniformFromName("separation_range"), boidProperties.separation_range);
+    glUniform1f(forceShader->getUniformFromName("separation_factor"), boidProperties.separation_factor);
+    glUniform1f(forceShader->getUniformFromName("alignment_factor"), boidProperties.alignment_factor);
+    glUniform1f(forceShader->getUniformFromName("boundary_avoidance_factor"), boidProperties.boundary_avoidance_factor);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particlePosSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, particleVelSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, particleAccSSBO);
@@ -88,6 +90,8 @@ void ParticleSystem::update()
     forceShader->deactivate();
 
     computeShader->activate();
+    glUniform1f(computeShader->getUniformFromName("DT"), boidProperties.dt);
+    glUniform1f(computeShader->getUniformFromName("max_vel"), boidProperties.max_vel);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particlePosSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, particleVelSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, particleAccSSBO);
@@ -120,6 +124,7 @@ void ParticleSystem::render(GLFWwindow *window, Gloom::Camera *camera)
         boundingBox->renderAsWireframe(window, camera);
     }
     colorShader->activate();
+    glUniform1f(colorShader->getUniformFromName("particleSize"), boidProperties.size);
     glUniformMatrix4fv(colorShader->getUniformFromName("VP"), 1, GL_FALSE, glm::value_ptr(VP));
 
     glBindVertexArray(particleVAO);

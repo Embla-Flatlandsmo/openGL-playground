@@ -23,6 +23,18 @@ struct acc
     float ax, ay, az, aw;
 };
 
+struct particleProperties
+{
+    float size = 0.5;
+    float cohesion_factor = 0.01;
+    float separation_factor = 0.5;
+    float separation_range = 1.0;
+    float alignment_factor = 0.125;
+    float boundary_avoidance_factor = 0.01;
+    float dt = 1.0;
+    float max_vel = 0.3;
+};
+
 class ParticleSystem
 {
 public:
@@ -32,8 +44,10 @@ public:
     void render(GLFWwindow *window, Gloom::Camera *camera);
     void setDebugMode(bool debug);
 
+    struct particleProperties boidProperties;
+
 private:
-    BoundingBox* boundingBox;
+    BoundingBox *boundingBox;
     GLuint particlePosSSBO;
     GLuint particleVelSSBO;
     GLuint particleAccSSBO;
@@ -47,7 +61,6 @@ private:
     Gloom::Shader *computeShader;
     Gloom::Shader *forceShader;
 
-
     GLuint prefixSumsLoc;
     GLuint particleIndicesLoc;
     GLuint bucketSizesLoc;
@@ -59,9 +72,8 @@ private:
     Gloom::Shader *gridBucketsShader;
     Gloom::Shader *reindexShader;
 
-
-    Mesh* particleModel;
-    float particleSize;
+    Mesh *particleModel;
+    // float particleSize;
 
     bool debug = true;
 

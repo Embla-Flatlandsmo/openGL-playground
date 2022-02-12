@@ -1,6 +1,15 @@
 #include <chrono>
+
+
+
+#include "utilities/imgui/imgui.h"
+#include "utilities/imgui/imgui_impl_glfw.h"
+#include "utilities/imgui/imgui_impl_opengl3.h"
+
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
+
+
 #include <SFML/Audio/SoundBuffer.hpp>
 #include <utilities/shader.hpp>
 #include <glm/vec3.hpp>
@@ -104,11 +113,11 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
 
     options = gameOptions;
 
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-
+    // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     // Callbacks setup for user input
-    glfwSetCursorPosCallback(window, mouseCallback);
-    glfwSetMouseButtonCallback(window, mouseButtonCallback);
+    // glfwSetCursorPosCallback(window, mouseCallback);
+    // glfwSetMouseButtonCallback(window, mouseButtonCallback);
     glfwSetKeyCallback(window, keyboardCallback);
 
 
@@ -139,7 +148,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
 }
 
 void updateFrame(GLFWwindow* window) {
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     double timeDelta = getTimeDeltaSeconds();
 
@@ -200,4 +209,28 @@ void renderFrame(GLFWwindow* window) {
     particles->render(window, camera);
     shader->activate();
     renderNode(rootNode);
+}
+
+void renderUI(void) {
+    // ImGui::ShowDemoWindow
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    // ImGui::ShowDemoWindow();
+    ImGui::Begin("Boid properties");
+    // ImGui::Text("WOWWWWW!!!");
+    ImGui::SliderFloat("Size", &(particles->boidProperties.size), 0.1f, 2.0f);
+    ImGui::SliderFloat("Cohesion", &(particles->boidProperties.cohesion_factor), 0.0f, 1.5f);
+    ImGui::SliderFloat("Alignment", &(particles->boidProperties.alignment_factor), 0.0f, 1.5f);
+    ImGui::SliderFloat("Separation", &(particles->boidProperties.separation_factor), 0.0f, 1.5f);
+    ImGui::SliderFloat("Separation Range", &(particles->boidProperties.separation_range), 0.0f, 3.0f); // Max is view range
+    ImGui::SliderFloat("Boundary avoidance", &(particles->boidProperties.boundary_avoidance_factor), 0.0f, 1.5f);
+    ImGui::SliderFloat("dt", &(particles->boidProperties.dt), 0.0f, 2.0);
+    ImGui::SliderFloat("Max velocity", &(particles->boidProperties.max_vel), 0.0f, 4.0f);
+    
+    
+    // ImGui::Checkbox("Get cucked?", &dummy);
+    ImGui::End();
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }

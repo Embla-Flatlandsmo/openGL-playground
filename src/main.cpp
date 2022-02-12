@@ -2,6 +2,10 @@
 #include "utilities/window.hpp"
 #include "program.hpp"
 
+#include "utilities/imgui/imgui.h"
+#include "utilities/imgui/imgui_impl_glfw.h"
+#include "utilities/imgui/imgui_impl_opengl3.h"
+
 // System headers
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -76,6 +80,7 @@ GLFWwindow* initialise()
     printf("Max work group size %i %i %i\n", gsx, gsy, gsz);
     printf("Max work group count %i %i %i\n",gcx, gcy, gcz);
     printf("Max invocations      %i\n", inv);
+
     return window;
 }
 
@@ -114,10 +119,25 @@ int main(int argc, const char* argb[])
     // Initialise window using GLFW
     GLFWwindow* window = initialise();
 
+    // UI panels initialization
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.WantCaptureMouse = true;
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 430 core");
+
+    
     // Run an OpenGL application using this window
     runProgram(window, options);
 
     // Terminate GLFW (no need to call glfwDestroyWindow)
+
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
     glfwTerminate();
 
     return EXIT_SUCCESS;
