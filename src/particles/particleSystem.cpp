@@ -16,8 +16,6 @@
 
 #define WORK_GROUP_SIZE 1024
 
-#define MAX_VELOCITY 2
-
 ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
 {
     particleModel = new Mesh(loadObj("../res/models/boid.obj"));
@@ -85,20 +83,21 @@ void ParticleSystem::update()
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, particleAccSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, particleIndicesLoc);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, prefixSumsLoc);
-    glDispatchCompute(ceil(NUM_PARTICLES/WORK_GROUP_SIZE), 1, 1);
+    glDispatchCompute(ceil(float(NUM_PARTICLES)/WORK_GROUP_SIZE), 1, 1);
     glMemoryBarrier(GL_ALL_BARRIER_BITS);
     forceShader->deactivate();
 
     computeShader->activate();
     glUniform1f(computeShader->getUniformFromName("DT"), boidProperties.dt);
     glUniform1f(computeShader->getUniformFromName("max_vel"), boidProperties.max_vel);
+    glUniform1i(computeShader->getUniformFromName("wrap_around"), boidProperties.wrap_around);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particlePosSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, particleVelSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, particleAccSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, particleIndicesLoc);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, prefixSumsLoc);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, bucketSizesLoc);
-    glDispatchCompute(ceil(NUM_PARTICLES/WORK_GROUP_SIZE), 1, 1);
+    glDispatchCompute(ceil(float(NUM_PARTICLES)/WORK_GROUP_SIZE), 1, 1);
     glMemoryBarrier(GL_ALL_BARRIER_BITS);
     computeShader->deactivate();
 }
@@ -175,9 +174,9 @@ void ParticleSystem::initParticles()
     particleVels = (struct vel *)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, NUM_PARTICLES * sizeof(struct vel), bufMask);
     for (int i = 0; i < NUM_PARTICLES; i++)
     {
-        particleVels[i].vx = MAX_VELOCITY * (rand() - rand()) / (float)RAND_MAX;
-        particleVels[i].vy = MAX_VELOCITY * (rand() - rand()) / (float)RAND_MAX;
-        particleVels[i].vz = MAX_VELOCITY * (rand() - rand()) / (float)RAND_MAX;
+        particleVels[i].vx = boidProperties.max_vel * (rand() - rand()) / (float)RAND_MAX;
+        particleVels[i].vy = boidProperties.max_vel * (rand() - rand()) / (float)RAND_MAX;
+        particleVels[i].vz = boidProperties.max_vel * (rand() - rand()) / (float)RAND_MAX;
         particleVels[i].vw = 0;
     }
     glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
@@ -227,6 +226,7 @@ void ParticleSystem::initGridSorting()
     glUniform3fv(gridBucketsShader->getUniformFromName("boundingBoxLow"), 1, glm::value_ptr(boundingBox->low));
     glUniform3fv(gridBucketsShader->getUniformFromName("boundingBoxHigh"), 1, glm::value_ptr(boundingBox->high));
     glUniform3uiv(gridBucketsShader->getUniformFromName("gridRes"), 1, glm::value_ptr(boundingBox->resolution));
+    glUniform1ui(gridBucketsShader->getUniformFromName("numBoids"), NUM_PARTICLES);
     gridBucketsShader->deactivate();
     
     reindexShader = new Gloom::Shader();
@@ -236,6 +236,7 @@ void ParticleSystem::initGridSorting()
     glUniform3fv(reindexShader->getUniformFromName("boundingBoxLow"), 1, glm::value_ptr(boundingBox->low));
     glUniform3fv(reindexShader->getUniformFromName("boundingBoxHigh"), 1, glm::value_ptr(boundingBox->high));
     glUniform3uiv(reindexShader->getUniformFromName("gridRes"), 1, glm::value_ptr(boundingBox->resolution));
+    glUniform1ui(reindexShader->getUniformFromName("numBoids"), NUM_PARTICLES);
     reindexShader->deactivate();
 
 
@@ -282,7 +283,7 @@ void ParticleSystem::countBucketSizes() {
     gridBucketsShader->activate();
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particlePosSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, bucketSizesLoc);
-    glDispatchCompute(ceil(NUM_PARTICLES/WORK_GROUP_SIZE), 1, 1);
+    glDispatchCompute(ceil(float(NUM_PARTICLES)/WORK_GROUP_SIZE), 1, 1);
     glMemoryBarrier(GL_ALL_BARRIER_BITS);
     gridBucketsShader->deactivate();
 
@@ -313,22 +314,22 @@ void ParticleSystem::computePrefixSum() {
     do
     {
         glUniform1ui(prefixSumShader->getUniformFromName("chunkSize"), chunkSize);
-        glDispatchCompute(ceil((boundingBox->numCells)/WORK_GROUP_SIZE), 1, 1);
+        glDispatchCompute(ceil((float(boundingBox->numCells))/WORK_GROUP_SIZE), 1, 1);
         glMemoryBarrier(GL_ALL_BARRIER_BITS);
         chunkSize *= 2;
     } while (chunkSize <= boundingBox->numCells);
 
     // // Noe er galt med prefix sum!!!
     // // Fungerer for numCells=4096
-    // uint32_t arraySize = sizeof(GLuint)*(boundingBox->numCells);
-    // glBindBuffer(GL_SHADER_STORAGE_BUFFER, prefixSumsLoc);
-    // GLuint* sums = (GLuint*)glMapNamedBufferRange(prefixSumsLoc, 0, arraySize, GL_MAP_READ_BIT);
-    // memcpy(prefixSums, sums, arraySize);
-    // glUnmapNamedBuffer(prefixSumsLoc);
-    // glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    uint32_t arraySize = sizeof(GLuint)*(boundingBox->numCells);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, prefixSumsLoc);
+    GLuint* sums = (GLuint*)glMapNamedBufferRange(prefixSumsLoc, 0, arraySize, GL_MAP_READ_BIT);
+    memcpy(prefixSums, sums, arraySize);
+    glUnmapNamedBuffer(prefixSumsLoc);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-    // printf("PrefixSum[%d]: %d\n",boundingBox->numCells-1,prefixSums[boundingBox->numCells-1]);
-    // printf("Num particles: %i\n", NUM_PARTICLES);
+    printf("PrefixSum[%d]: %d\n",boundingBox->numCells-1,prefixSums[boundingBox->numCells-1]);
+    printf("Num particles: %i\n", NUM_PARTICLES);
     prefixSumShader->deactivate();
     
 }
@@ -342,7 +343,7 @@ void ParticleSystem::computeReindexGrid() {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, bucketSizesLoc);
 
 
-    glDispatchCompute(ceil(NUM_PARTICLES/WORK_GROUP_SIZE), 1, 1);
+    glDispatchCompute(ceil(float(NUM_PARTICLES)/WORK_GROUP_SIZE), 1, 1);
     glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
     reindexShader->deactivate();

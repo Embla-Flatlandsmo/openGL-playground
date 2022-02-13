@@ -26,15 +26,18 @@ layout(std430, binding=5) buffer bucketSize
 uniform vec3 boundingBoxLow;
 uniform vec3 boundingBoxHigh;
 uniform uvec3 gridRes;
+uniform uint numBoids;
 
 void main(void) {
     uint gid = gl_GlobalInvocationID.x;
-
+    if (gid >= numBoids) {
+        return;
+    }
     vec3 diagonal = boundingBoxHigh-boundingBoxLow;
     vec3 range = diagonal/gridRes;
     uvec3 vgridIdx = uvec3((Positions[gid].xyz-boundingBoxLow)/range);
     uint cellIdx =  uint(gridRes.x * gridRes.y * vgridIdx.z + gridRes.x * vgridIdx.y + vgridIdx.x);
     
     uint particleIdx = prefixSums[cellIdx]+atomicAdd(bucketSizes[cellIdx],-1)-1;
-    particleIndices[particleIdx]=gid;
+    particleIndices[gid]=particleIdx;
 }

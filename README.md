@@ -14,7 +14,8 @@ The starter code is lifted from https://github.com/bartvbl/TDT4230-Assignment-1
 - [ ] Clean up ugly compute shader code
 - [x] Implement dynamic spatial hashing ala [Wicked Engine Net](https://wickedengine.net/2018/05/21/scalabe-gpu-fluid-simulation/)
 - [x] Implement bin sorting with counting sort ala [this Nvidia thing](https://on-demand.gputechconf.com/gtc/2014/presentations/S4117-fast-fixed-radius-nearest-neighbor-gpu.pdf)
-- [ ] Implement GUI for boid parameters
+- [x] Implement GUI for boid parameters
+- [ ] Fix boids checking???? Doesn't work right now
 - [ ] Sort boids instead of updating boid indices
 - [ ] Do the rest of the things necessary to make A MILLION BOIDS!!!!
 - [ ] Come up with a good way to structure the program

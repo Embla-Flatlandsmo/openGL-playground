@@ -227,7 +227,7 @@ void renderUI(void) {
     ImGui::SliderFloat("Boundary avoidance", &(particles->boidProperties.boundary_avoidance_factor), 0.0f, 1.5f);
     ImGui::SliderFloat("dt", &(particles->boidProperties.dt), 0.0f, 2.0);
     ImGui::SliderFloat("Max velocity", &(particles->boidProperties.max_vel), 0.0f, 4.0f);
-    
+    ImGui::Checkbox("Wrap around", &(particles->boidProperties.wrap_around));
     
     // ImGui::Checkbox("Get cucked?", &dummy);
     ImGui::End();

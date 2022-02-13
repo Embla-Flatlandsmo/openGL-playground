@@ -7,7 +7,7 @@
 #include <utilities/shader.hpp>
 #include <utilities/mesh.h>
 
-#define NUM_PARTICLES 1024
+#define NUM_PARTICLES 128
 struct pos
 {
     float x, y, z, w;
@@ -33,6 +33,7 @@ struct particleProperties
     float boundary_avoidance_factor = 0.01;
     float dt = 1.0;
     float max_vel = 0.3;
+    bool wrap_around = true;
 };
 
 class ParticleSystem
