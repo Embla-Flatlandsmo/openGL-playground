@@ -15,7 +15,7 @@
 class BoundingBox
 {
 public:
-    BoundingBox(glm::vec3 low, glm::vec3 high);
+    BoundingBox(glm::vec3 low, glm::vec3 high, float cell_size);
     /**
      * @brief Destroy the Bounding Box object
      */

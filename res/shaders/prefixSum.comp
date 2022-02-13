@@ -26,7 +26,7 @@ void main(void) {
         prefixSums[gid] = bucketSizes[gid];
     }
 
-    if ((gid < stepLength) || (gid => numCells)) {
+    if ((gid < stepLength) || (gid >= numCells)) {
         // We will index out of bounds if we try (gid-stepLength<0)
         return;
     }

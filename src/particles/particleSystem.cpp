@@ -20,7 +20,7 @@ ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
 {
     particleModel = new Mesh(loadObj("../res/models/boid.obj"));
 
-    boundingBox = new BoundingBox(low, high);
+    boundingBox = new BoundingBox(low, high, boidProperties.view_range);
 
     particlePoints = new struct pos[NUM_PARTICLES];
     particleVels = new struct vel[NUM_PARTICLES];
@@ -40,7 +40,6 @@ ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
     glUniform3fv(computeShader->getUniformFromName("boundingBoxHigh"), 1, glm::value_ptr(boundingBox->high));
     glUniform1i(computeShader->getUniformFromName("numBoids"), NUM_PARTICLES);
     glUniform3uiv(computeShader->getUniformFromName("gridRes"), 1, glm::value_ptr(boundingBox->resolution));
-
     computeShader->deactivate();
 
     forceShader = new Gloom::Shader();
@@ -53,6 +52,7 @@ ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
     glUniform3fv(forceShader->getUniformFromName("boundingBoxHigh"), 1, glm::value_ptr(boundingBox->high));
     glUniform1i(forceShader->getUniformFromName("numBoids"), NUM_PARTICLES);
     glUniform3uiv(forceShader->getUniformFromName("gridRes"), 1, glm::value_ptr(boundingBox->resolution));
+    glUniform1f(forceShader->getUniformFromName("view_range"), boidProperties.view_range);
     forceShader->deactivate();
 
     initParticles();
@@ -321,15 +321,15 @@ void ParticleSystem::computePrefixSum() {
 
     // // Noe er galt med prefix sum!!!
     // // Fungerer for numCells=4096
-    uint32_t arraySize = sizeof(GLuint)*(boundingBox->numCells);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, prefixSumsLoc);
-    GLuint* sums = (GLuint*)glMapNamedBufferRange(prefixSumsLoc, 0, arraySize, GL_MAP_READ_BIT);
-    memcpy(prefixSums, sums, arraySize);
-    glUnmapNamedBuffer(prefixSumsLoc);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    // uint32_t arraySize = sizeof(GLuint)*(boundingBox->numCells);
+    // glBindBuffer(GL_SHADER_STORAGE_BUFFER, prefixSumsLoc);
+    // GLuint* sums = (GLuint*)glMapNamedBufferRange(prefixSumsLoc, 0, arraySize, GL_MAP_READ_BIT);
+    // memcpy(prefixSums, sums, arraySize);
+    // glUnmapNamedBuffer(prefixSumsLoc);
+    // glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-    printf("PrefixSum[%d]: %d\n",boundingBox->numCells-1,prefixSums[boundingBox->numCells-1]);
-    printf("Num particles: %i\n", NUM_PARTICLES);
+    // printf("PrefixSum[%d]: %d\n",boundingBox->numCells-1,prefixSums[boundingBox->numCells-1]);
+    // printf("Num particles: %i\n", NUM_PARTICLES);
     prefixSumShader->deactivate();
     
 }
@@ -345,6 +345,19 @@ void ParticleSystem::computeReindexGrid() {
 
     glDispatchCompute(ceil(float(NUM_PARTICLES)/WORK_GROUP_SIZE), 1, 1);
     glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
+    // uint32_t arraySize = NUM_PARTICLES * sizeof(GLuint);
+    // glBindBuffer(GL_SHADER_STORAGE_BUFFER, particleIndicesLoc);
+    // GLuint* sums = (GLuint*)glMapNamedBufferRange(particleIndicesLoc, 0, arraySize, GL_MAP_READ_BIT);
+    // memcpy(particleIndices, sums, arraySize);
+
+    // glUnmapNamedBuffer(particleIndicesLoc);
+    // glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    // printf("particleIndices[%d]: %d\n",NUM_PARTICLES-1,particleIndices[NUM_PARTICLES-1]);
+    // printf("Num particles: %i\n", NUM_PARTICLES);
+    prefixSumShader->deactivate();
+
 
     reindexShader->deactivate();
 } 

@@ -59,7 +59,8 @@ sf::Sound* sound;
 Gloom::Camera* camera;
 ParticleSystem* particles;
 
-const glm::vec3 boxDimensions(180, 90, 90);
+// const glm::vec3 boxDimensions(180, 90, 90);
+const glm::vec3 boxDimensions(300, 150, 150);
 const glm::vec3 padDimensions(30, 3, 40);
 
 glm::vec3 ballPosition(0, ballRadius + padDimensions.y, boxDimensions.z / 2);
@@ -140,7 +141,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     boxNode->vertexArrayObjectID = boxVAO;
     boxNode->VAOIndexCount = box.indices.size();
 
-    particles = new ParticleSystem(glm::vec3(-20.,-20.,-20.), glm::vec3(20., 20., 20.));
+    particles = new ParticleSystem(glm::vec3(-10.,-10.,-10.), glm::vec3(30., 30., 30.));
 
     getTimeDeltaSeconds();
 

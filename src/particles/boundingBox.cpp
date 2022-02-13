@@ -78,11 +78,14 @@ unsigned int createWireframeCube(glm::vec3 scale)
 
 }
 
-BoundingBox::BoundingBox(glm::vec3 low, glm::vec3 high)
+BoundingBox::BoundingBox(glm::vec3 low, glm::vec3 high, float cell_size)
 {
     this->low = low;
     this->high = high;
-    this->resolution = glm::uvec3(8,8,8);
+    // glm::uvec3 res = glm::round((high-low)/cell_size);
+
+    this->resolution = glm::floor((high-low)/cell_size);
+    printf("GridRes: [%d, %d, %d]", resolution.x, resolution.y, resolution.z);
     numCells = this->resolution.x*this->resolution.y*this->resolution.z;
     boxShader = new Gloom::Shader();
     boxShader->makeBasicShader("../res/shaders/box.vert", "../res/shaders/box.frag");

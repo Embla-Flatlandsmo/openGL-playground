@@ -37,13 +37,14 @@ uniform float cohesion_factor;
 uniform float separation_range;
 uniform float separation_factor;
 uniform float alignment_factor;
-uniform float boundary_avoidance_factor;  
+uniform float boundary_avoidance_factor; 
+uniform float view_range; 
 // const float cohesion_factor = 0.01;
 // const float separation_range = 1.0;
 // const float separation_factor = 1.0;
 // const float alignment_factor = 0.125;
 // const float boundary_avoidance_factor = 0.01;
-const float view_range = 4.0;
+// const float view_range = 3.0;
 vec3 separation_vector = vec3(0.f);
 vec3 alignment_vector = vec3(0.f);
 vec3 cohesion_vector = vec3(0.f);
@@ -89,7 +90,7 @@ vec3 avoidBoundary(vec3 pos) {
     //TODO: Find a better way to do this
     vec3 centeredPos = pos-boundingBoxLow-diagonal/2;
     float distanceFromEdge = distance(abs(centeredPos), diagonal/2);
-    return -centeredPos/clamp(distanceFromEdge, 0.001, 1000);
+    return -centeredPos/clamp(distanceFromEdge, 0.001, 1000.0);
 }
 
 
@@ -211,41 +212,41 @@ void flockInCell(uint x, uint y, uint z) {
 
 void main() {
     uint gid = gl_GlobalInvocationID.x;
-    if (gid => numBoids) {
+    if (gid >= numBoids) {
         return;
     }
     
     currentParticleIndex = particleIndices[gid];
     boid_t current_boid = get_boid(currentParticleIndex);
 
-    vec3 coh = cohesion(gid);
-    vec3 sep = separation(gid);
-    vec3 alig = alignment(gid);
-    current_boid.acc = vec3(0.,0.,0.);
-    current_boid.acc += coh+sep+alig;
-    current_boid.acc += avoidBoundary(current_boid.pos)*boundary_avoidance_factor;
+    // vec3 coh = cohesion(gid);
+    // vec3 sep = separation(gid);
+    // vec3 alig = alignment(gid);
+    // current_boid.acc = vec3(0.,0.,0.);
+    // current_boid.acc += coh+sep+alig;
+    // current_boid.acc += avoidBoundary(current_boid.pos)*boundary_avoidance_factor;
 
-    // uint cellID = getFlatCellIDfromPos(current_boid.pos);
-    // for (int zOffset = -1; zOffset <= 1; zOffset++) {
-    //     uint gridXY = gridRes.x*gridRes.y;
-    //     uint z = cellID/gridXY;
-    //     for (int yOffset = -1; yOffset <= 1; yOffset++) {
-    //         uint tmpy = cellID - (z * gridXY);
-    //         uint y = tmpy/gridRes.x;
-    //         for (int xOffset = -1; xOffset <= 1; xOffset++) {
-    //             uint x = tmpy - y*gridRes.x;
-    //             flockInCell((z+zOffset+gridRes.z)%gridRes.z,
-    //                         (y+yOffset+gridRes.y)%gridRes.y,
-    //                         (x+xOffset+gridRes.x)%gridRes.x);
-    //         }
-    //     }
-    // }
+    uint cellID = getFlatCellIDfromPos(current_boid.pos);
+    for (int zOffset = -1; zOffset <= 1; zOffset++) {
+        uint gridXY = gridRes.x*gridRes.y;
+        uint z = cellID/gridXY;
+        for (int yOffset = -1; yOffset <= 1; yOffset++) {
+            uint tmpy = cellID - (z * gridXY);
+            uint y = tmpy/gridRes.x;
+            for (int xOffset = -1; xOffset <= 1; xOffset++) {
+                uint x = tmpy - y*gridRes.x;
+                flockInCell((z+zOffset+gridRes.z)%gridRes.z,
+                            (y+yOffset+gridRes.y)%gridRes.y,
+                            (x+xOffset+gridRes.x)%gridRes.x);
+            }
+        }
+    }
 
-    // current_boid.acc = vec3(0.f,0.f,0.f);
-    // current_boid.acc = avoidBoundary(current_boid.pos)*boundary_avoidance_factor;
-    // if (num_in_range != 0) {
-    //     current_boid.acc += (separation_vector*separation_factor + (cohesion_vector*cohesion_factor + alignment_vector*alignment_factor)/num_in_range);
-    // }
+    current_boid.acc = vec3(0.f,0.f,0.f);
+    current_boid.acc = avoidBoundary(current_boid.pos)*boundary_avoidance_factor;
+    if (num_in_range != 0) {
+        current_boid.acc += (separation_vector*separation_factor + (cohesion_vector*cohesion_factor + alignment_vector*alignment_factor)/num_in_range);
+    }
 
     /* Other grid-based approach: */
     // uint cellID = getFlatCellIDfromPos(current_boid.pos);

@@ -74,7 +74,7 @@ void update_boid(uint i, boid_t b) {
 
 void main() {
     uint gid = gl_GlobalInvocationID.x;
-    if (gid => numBoids) {
+    if (gid >= numBoids) {
         return;
     }
 
