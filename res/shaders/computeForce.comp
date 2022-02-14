@@ -17,11 +17,6 @@ layout(std140, binding=2) buffer Acc
     vec4 Accelerations[];
 };
 
-layout(std430, binding=3) readonly buffer particleIndex
-{
-    uint particleIndices[];
-};
-
 layout(std430, binding=4) readonly buffer prefixSum
 {
     uint prefixSums[];
@@ -205,7 +200,7 @@ void flockInCell(uint x, uint y, uint z) {
         return;
 
     for (uint i = start; i < end; ++i)
-        flock(particleIndices[i]);
+        flock(i);
 }
 
 
@@ -216,7 +211,7 @@ void main() {
         return;
     }
     
-    currentParticleIndex = particleIndices[gid];
+    currentParticleIndex = gid;
     boid_t current_boid = get_boid(currentParticleIndex);
 
     // vec3 coh = cohesion(gid);

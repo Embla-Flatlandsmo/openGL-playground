@@ -22,6 +22,16 @@ layout(std430, binding=5) buffer bucketSize
     uint bucketSizes[];
 };
 
+layout(std140, binding=6) buffer Pos_backup
+{
+    vec4 Positions_backup[];
+};
+
+layout(std140, binding=7) buffer Vel_backup
+{
+    vec4 Velocities_backup[];
+};
+
 uniform vec3 boundingBoxLow;
 uniform vec3 boundingBoxHigh;
 uniform uvec3 gridRes;
@@ -68,7 +78,10 @@ boid_t get_boid(uint i) {
 
 void update_boid(uint i, boid_t b) {
     Positions[i].xyz = b.pos;
+    Positions_backup[i].xyz = b.pos;
+
     Velocities[i].xyz = b.vel;
+    Velocities_backup[i].xyz = b.vel;
     // Accelerations[i].xyz = b.acc; //Can't do because readonly
 }
 

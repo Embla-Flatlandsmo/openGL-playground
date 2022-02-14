@@ -7,7 +7,7 @@
 #include <utilities/shader.hpp>
 #include <utilities/mesh.h>
 
-#define NUM_PARTICLES 1024
+#define NUM_PARTICLES 1024*8
 struct pos
 {
     float x, y, z, w;
@@ -51,7 +51,9 @@ public:
 private:
     BoundingBox *boundingBox;
     GLuint particlePosSSBO;
+    GLuint particlePosSSBO_prev;
     GLuint particleVelSSBO;
+    GLuint particleVelSSBO_prev;
     GLuint particleAccSSBO;
     GLuint particleVAO;
 
@@ -64,10 +66,8 @@ private:
     Gloom::Shader *forceShader;
 
     GLuint prefixSumsLoc;
-    GLuint particleIndicesLoc;
     GLuint bucketSizesLoc;
     GLuint *prefixSums;
-    GLuint *particleIndices;
     GLuint *bucketSizes;
 
     Gloom::Shader *prefixSumShader;
@@ -75,7 +75,6 @@ private:
     Gloom::Shader *reindexShader;
 
     Mesh *particleModel;
-    // float particleSize;
 
     bool debug = true;
 

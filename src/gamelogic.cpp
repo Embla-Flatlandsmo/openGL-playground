@@ -141,7 +141,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     boxNode->vertexArrayObjectID = boxVAO;
     boxNode->VAOIndexCount = box.indices.size();
 
-    particles = new ParticleSystem(glm::vec3(-10.,-10.,-10.), glm::vec3(30., 30., 30.));
+    particles = new ParticleSystem(glm::vec3(-20.,-20.,-20.), glm::vec3(20., 20., 20.));
 
     getTimeDeltaSeconds();
 

@@ -7,6 +7,11 @@ layout(std140, binding=0) buffer particlePositions
     vec4 Positions[];
 };
 
+layout(std140, binding=1) buffer particleVelocities
+{
+    vec4 Velocities[];
+};
+
 layout(std430, binding=3) buffer particleIndex
 {
     uint particleIndices[];
@@ -20,6 +25,16 @@ layout(std430, binding=4) readonly buffer prefixSum
 layout(std430, binding=5) buffer bucketSize
 {
     uint bucketSizes[];
+};
+
+layout(std140, binding=6) buffer particlePositions_read
+{
+    vec4 Positions_read[];
+};
+
+layout(std140, binding=7) buffer particleVelocities_read
+{
+    vec4 Velocities_read[];
 };
 
 
@@ -39,5 +54,8 @@ void main(void) {
     uint cellIdx =  uint(gridRes.x * gridRes.y * vgridIdx.z + gridRes.x * vgridIdx.y + vgridIdx.x);
     
     uint particleIdx = prefixSums[cellIdx]+atomicAdd(bucketSizes[cellIdx],-1)-1;
-    particleIndices[gid]=particleIdx;
+    // Maybe the indexing here is wrong??
+    // Positions[particleIdx] = Positions_read[gid];
+    // Velocities[particleIdx] = Velocities_read[gid];
+    // particleIndices[gid]=particleIdx;
 }
