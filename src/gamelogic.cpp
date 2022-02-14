@@ -1,7 +1,5 @@
 #include <chrono>
 
-
-
 #include "utilities/imgui/imgui.h"
 #include "utilities/imgui/imgui_impl_glfw.h"
 #include "utilities/imgui/imgui_impl_opengl3.h"
@@ -122,7 +120,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     glfwSetKeyCallback(window, keyboardCallback);
 
 
-    camera = new Gloom::Camera();
+    camera = new Gloom::Camera(glm::vec3(20, 20, 70));
     shader = new Gloom::Shader();
     shader->makeBasicShader("../res/shaders/simple.vert", "../res/shaders/simple.frag");
     shader->activate();
@@ -141,7 +139,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     boxNode->vertexArrayObjectID = boxVAO;
     boxNode->VAOIndexCount = box.indices.size();
 
-    particles = new ParticleSystem(glm::vec3(-20.,-20.,-20.), glm::vec3(20., 20., 20.));
+    particles = new ParticleSystem(glm::vec3(00.,00.,00.), glm::vec3(40., 40., 40.));
 
     getTimeDeltaSeconds();
 

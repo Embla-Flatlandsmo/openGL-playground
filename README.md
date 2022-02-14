@@ -16,7 +16,8 @@ The starter code is lifted from https://github.com/bartvbl/TDT4230-Assignment-1
 - [x] Implement bin sorting with counting sort ala [this Nvidia thing](https://on-demand.gputechconf.com/gtc/2014/presentations/S4117-fast-fixed-radius-nearest-neighbor-gpu.pdf)
 - [x] Implement GUI for boid parameters
 - [x] Sort boids instead of updating boid indices (reindex rework)
-- [ ] Improve prefix sum calculation (currently the slowest step because of synch(?))
+- [x] Improve prefix sum calculation
+- [ ] Make number of cells configurable (fixed to 2048 because of prefix sum shader now)
 - [ ] Wrap-around distance checking
 - [ ] Do the rest of the things necessary to make A MILLION BOIDS!!!!
 - [ ] Come up with a good way to structure the program

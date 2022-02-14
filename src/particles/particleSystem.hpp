@@ -7,7 +7,8 @@
 #include <utilities/shader.hpp>
 #include <utilities/mesh.h>
 
-#define NUM_PARTICLES 1024*8
+#define NUM_PARTICLES 1024*32
+
 struct pos
 {
     float x, y, z, w;
@@ -27,10 +28,10 @@ struct particleProperties
 {
     float size = 0.5;
     float cohesion_factor = 0.01;
-    float separation_factor = 0.5;
-    float separation_range = 1.0;
+    float separation_factor = 0.05;
+    float separation_range = 0.5;
     float alignment_factor = 0.125;
-    float boundary_avoidance_factor = 0.06;
+    float boundary_avoidance_factor = 0.00;
     float dt = 1.0;
     float max_vel = 0.3;
     bool wrap_around = true;

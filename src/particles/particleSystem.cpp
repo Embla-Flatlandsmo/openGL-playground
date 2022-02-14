@@ -321,13 +321,16 @@ void ParticleSystem::computePrefixSum() {
     uint32_t chunkSize = 2;
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, prefixSumsLoc);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, bucketSizesLoc);
-    do
-    {
-        glUniform1ui(prefixSumShader->getUniformFromName("chunkSize"), chunkSize);
-        glDispatchCompute(ceil((float(boundingBox->numCells))/WORK_GROUP_SIZE), 1, 1);
-        glMemoryBarrier(GL_ALL_BARRIER_BITS);
-        chunkSize *= 2;
-    } while (chunkSize <= boundingBox->numCells);
+    glUniform1ui(prefixSumShader->getUniformFromName("chunkSize"), chunkSize);
+    glDispatchCompute(ceil((float(boundingBox->numCells))/WORK_GROUP_SIZE), 1, 1);
+    glMemoryBarrier(GL_ALL_BARRIER_BITS);
+    // do
+    // {
+    //     glUniform1ui(prefixSumShader->getUniformFromName("chunkSize"), chunkSize);
+    //     glDispatchCompute(ceil((float(boundingBox->numCells))/WORK_GROUP_SIZE), 1, 1);
+    //     glMemoryBarrier(GL_ALL_BARRIER_BITS);
+    //     chunkSize *= 2;
+    // } while (chunkSize <= boundingBox->numCells);
 
     // // Noe er galt med prefix sum!!!
     // // Fungerer for numCells=4096
