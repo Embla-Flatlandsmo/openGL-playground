@@ -139,7 +139,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     boxNode->vertexArrayObjectID = boxVAO;
     boxNode->VAOIndexCount = box.indices.size();
 
-    particles = new ParticleSystem(glm::vec3(00.,00.,00.), glm::vec3(40., 40., 40.));
+    particles = new ParticleSystem(glm::vec3(10.,10.,10.), glm::vec3(40., 40., 40.));
 
     getTimeDeltaSeconds();
 
@@ -223,7 +223,7 @@ void renderUI(void) {
     ImGui::SliderFloat("Alignment", &(particles->boidProperties.alignment_factor), 0.0f, 1.5f);
     ImGui::SliderFloat("Separation", &(particles->boidProperties.separation_factor), 0.0f, 1.5f);
     ImGui::SliderFloat("Separation Range", &(particles->boidProperties.separation_range), 0.0f, 3.0f); // Max is view range
-    ImGui::SliderFloat("Boundary avoidance", &(particles->boidProperties.boundary_avoidance_factor), 0.0f, 1.5f);
+    ImGui::SliderFloat("Boundary avoidance", &(particles->boidProperties.boundary_avoidance_factor), 0.0f, 0.2f);
     ImGui::SliderFloat("dt", &(particles->boidProperties.dt), 0.0f, 2.0);
     ImGui::SliderFloat("Max velocity", &(particles->boidProperties.max_vel), 0.0f, 4.0f);
     ImGui::Checkbox("Wrap around", &(particles->boidProperties.wrap_around));
