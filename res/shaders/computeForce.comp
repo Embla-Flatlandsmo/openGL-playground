@@ -84,8 +84,9 @@ boid_t get_boid(uint i) {
 vec3 avoidBoundary(vec3 pos) {
     //TODO: Find a better way to do this
     vec3 centeredPos = pos-boundingBoxLow-diagonal/2;
-    float distanceFromEdge = distance(abs(centeredPos), diagonal/2);
-    return -centeredPos/clamp(distanceFromEdge, 0.001, 1000.0);
+    return -centeredPos;
+    // float distanceFromEdge = distance(abs(centeredPos), diagonal/2);
+    // return -centeredPos/clamp(distanceFromEdge, 0.001, 1000.0);
 }
 
 
@@ -222,17 +223,16 @@ void main() {
     // current_boid.acc += avoidBoundary(current_boid.pos)*boundary_avoidance_factor;
 
     uint cellID = getFlatCellIDfromPos(current_boid.pos);
+    uvec3 boidCellPos = getCellIDfromPos(current_boid.pos);
     for (int zOffset = -1; zOffset <= 1; zOffset++) {
-        uint gridXY = gridRes.x*gridRes.y;
-        uint z = cellID/gridXY;
+        uint z = boidCellPos.z;
         for (int yOffset = -1; yOffset <= 1; yOffset++) {
-            uint tmpy = cellID - (z * gridXY);
-            uint y = tmpy/gridRes.x;
+            uint y = boidCellPos.y;
             for (int xOffset = -1; xOffset <= 1; xOffset++) {
-                uint x = tmpy - y*gridRes.x;
-                flockInCell((z+zOffset+gridRes.z)%gridRes.z,
+                uint x = boidCellPos.x;
+                flockInCell((x+xOffset+gridRes.x)%gridRes.x,
                             (y+yOffset+gridRes.y)%gridRes.y,
-                            (x+xOffset+gridRes.x)%gridRes.x);
+                            (z+zOffset+gridRes.z)%gridRes.z);
             }
         }
     }

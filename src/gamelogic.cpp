@@ -139,7 +139,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     boxNode->vertexArrayObjectID = boxVAO;
     boxNode->VAOIndexCount = box.indices.size();
 
-    particles = new ParticleSystem(glm::vec3(00.,00.,00.), glm::vec3(40., 40., 40.));
+    particles = new ParticleSystem(glm::vec3(10.,10.,10.), glm::vec3(40., 40., 40.));
 
     getTimeDeltaSeconds();
 
@@ -215,21 +215,27 @@ void renderUI(void) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    // ImGui::ShowDemoWindow();
+
+
     ImGui::Begin("Boid properties");
-    // ImGui::Text("WOWWWWW!!!");
     ImGui::SliderFloat("Size", &(particles->boidProperties.size), 0.1f, 2.0f);
     ImGui::SliderFloat("Cohesion", &(particles->boidProperties.cohesion_factor), 0.0f, 1.5f);
     ImGui::SliderFloat("Alignment", &(particles->boidProperties.alignment_factor), 0.0f, 1.5f);
     ImGui::SliderFloat("Separation", &(particles->boidProperties.separation_factor), 0.0f, 1.5f);
     ImGui::SliderFloat("Separation Range", &(particles->boidProperties.separation_range), 0.0f, 3.0f); // Max is view range
-    ImGui::SliderFloat("Boundary avoidance", &(particles->boidProperties.boundary_avoidance_factor), 0.0f, 1.5f);
+    ImGui::SliderFloat("Boundary avoidance", &(particles->boidProperties.boundary_avoidance_factor), 0.0f, 0.2f);
     ImGui::SliderFloat("dt", &(particles->boidProperties.dt), 0.0f, 2.0);
     ImGui::SliderFloat("Max velocity", &(particles->boidProperties.max_vel), 0.0f, 4.0f);
     ImGui::Checkbox("Wrap around", &(particles->boidProperties.wrap_around));
-    
-    // ImGui::Checkbox("Get cucked?", &dummy);
     ImGui::End();
+    
+    ImGui::Begin("Diagonstics");
+    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
+                        1000.0f / ImGui::GetIO().Framerate,
+                        ImGui::GetIO().Framerate);
+    ImGui::End();
+
+
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
