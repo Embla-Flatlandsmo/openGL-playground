@@ -226,6 +226,7 @@ void main() {
     uvec3 boidCellPos = getCellIDfromPos(current_boid.pos);
     for (int zOffset = -1; zOffset <= 1; zOffset++) {
         uint z = boidCellPos.z;
+        for (int yOffset = -1; yOffset <= 1; yOffset++) {
             uint y = boidCellPos.y;
             for (int xOffset = -1; xOffset <= 1; xOffset++) {
                 uint x = boidCellPos.x;
