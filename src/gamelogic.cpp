@@ -30,6 +30,7 @@
 #include "utilities/imageLoader.hpp"
 #include "utilities/glfont.h"
 #include "particles/particleSystem.hpp"
+#include "clouds/cloudBox.hpp"
 
 enum KeyFrameAction {
     BOTTOM, TOP
@@ -56,6 +57,7 @@ Gloom::Shader* shader;
 sf::Sound* sound;
 Gloom::Camera* camera;
 ParticleSystem* particles;
+CloudBox* cloud;
 
 // const glm::vec3 boxDimensions(180, 90, 90);
 const glm::vec3 boxDimensions(300, 150, 150);
@@ -138,7 +140,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     rootNode->children.push_back(boxNode);
     boxNode->vertexArrayObjectID = boxVAO;
     boxNode->VAOIndexCount = box.indices.size();
-
+    cloud = new CloudBox(glm::vec3(10.,10.,10.), glm::vec3(40., 40., 40.));
     particles = new ParticleSystem(glm::vec3(10.,10.,10.), glm::vec3(40., 40., 40.));
 
     getTimeDeltaSeconds();
@@ -205,9 +207,13 @@ void renderFrame(GLFWwindow* window) {
     int windowWidth, windowHeight;
     glfwGetWindowSize(window, &windowWidth, &windowHeight);
     glViewport(0, 0, windowWidth, windowHeight);
+
     particles->render(window, camera);
-    shader->activate();
-    renderNode(rootNode);
+    cloud->render(camera);
+
+    // shader->activate();
+    // renderNode(rootNode);
+
 }
 
 void renderUI(void) {

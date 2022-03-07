@@ -7,7 +7,7 @@
 #include <utilities/shader.hpp>
 #include <utilities/mesh.h>
 
-#define NUM_PARTICLES 1024*64
+#define NUM_PARTICLES 1024*32
 
 struct pos
 {

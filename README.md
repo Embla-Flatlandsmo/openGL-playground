@@ -6,6 +6,7 @@ The starter code is lifted from https://github.com/bartvbl/TDT4230-Assignment-1
 ![The state of it right now](the-state-of-it.gif)
 
 ## TODO:
+### Boids
 - [x] Visualize bounding box as a wireframe
 - [x] Visualize particles as tetrahedrons (using instancing)
 - [x] Visualize particles as arbitrary meshes
@@ -21,6 +22,10 @@ The starter code is lifted from https://github.com/bartvbl/TDT4230-Assignment-1
 - [ ] Wrap-around distance checking
 - [ ] Do the rest of the things necessary to make A MILLION BOIDS!!!!
 - [ ] Come up with a good way to structure the program
+### Clouds
+- [x] Parametric rendering in fragment shader
+- [ ] Use CPU camera to do viewing transform in frag shader
+
 
 ### Less important TODOs:
 - [ ] Make a better obj loader (that doesn't emit so many warnings)

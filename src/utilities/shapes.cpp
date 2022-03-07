@@ -315,3 +315,41 @@ Mesh generateBoid(float size)
     m.indices = indices;
     return m;
 }
+
+
+
+Mesh generateScreenQuad(void) 
+{
+    
+    std::vector<glm::vec3> vertices = {
+        {-1.0f, -1.0f, 0.0f},
+        {1.0f, -1.0f, 0.0f},
+        {-1.0f,  1.0f, 0.0f},
+        { 1.0f,  1.0f, 0.0f}
+    };
+
+    std::vector<glm::vec2> uvs = {
+        {0.0f, 0.0f},
+        {1.0f, 0.0f},
+        {0.0f, 1.0f},
+        {1.0f, 1.0f}
+    };
+
+    std::vector<unsigned int> indices = {
+        0, 1, 2, // Triangle 1
+        2, 1, 3  // Triangle 2
+    };
+
+    std::vector<glm::vec3> normals = {
+        {0.0f, 0.0f, -1.0f},
+        {0.0f, 0.0f, -1.0f},
+        {0.0f, 0.0f, -1.0f},
+    };
+
+    Mesh mesh;
+    mesh.vertices = vertices;
+    mesh.normals = normals;
+    mesh.indices = indices;
+    mesh.textureCoordinates = uvs;
+    return mesh;
+}

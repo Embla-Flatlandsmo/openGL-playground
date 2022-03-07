@@ -7,3 +7,4 @@ Mesh generateSphere(float radius, int slices, int layers);
 
 Mesh generateBoundingBoxMesh(glm::vec3 scale);
 Mesh generateBoid(float size);
+Mesh generateScreenQuad(void);
