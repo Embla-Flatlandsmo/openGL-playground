@@ -49,6 +49,9 @@ SceneNode* boxNode;
 SceneNode* ballNode;
 SceneNode* padNode;
 
+SceneNode* cloudNode;
+
+
 double ballRadius = 3.0f;
 
 // These are heap allocated, because they should not be initialised at the start of the program
@@ -100,12 +103,6 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
     camera->handleKeyboardInputs(key, action);
 }
 
-//// A few lines to help you if you've never used c++ structs
-// struct LightSource {
-//     bool a_placeholder_value;
-// };
-// LightSource lightSources[/*Put number of light sources you want here*/];
-
 void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     buffer = new sf::SoundBuffer();
     if (!buffer->loadFromFile("../res/Hall of the Mountain King.ogg")) {
@@ -143,6 +140,14 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     cloud = new CloudBox(glm::vec3(10.,10.,10.), glm::vec3(40., 40., 40.));
     particles = new ParticleSystem(glm::vec3(10.,10.,10.), glm::vec3(40., 40., 40.));
 
+
+
+    Mesh cloud = cube(glm::vec3(10,10,10), glm::vec2(90), false, false);
+    unsigned int cloudVAO = generateBuffer(cloud);
+    cloudNode = createSceneNode();
+    cloudNode->vertexArrayObjectID = cloudVAO;
+    cloudNode->VAOIndexCount = cloud.indices.size();
+    rootNode->children.push_back(cloudNode);
     getTimeDeltaSeconds();
 
     std::cout << "Ready. Click to start!" << std::endl;
@@ -208,12 +213,12 @@ void renderFrame(GLFWwindow* window) {
     glfwGetWindowSize(window, &windowWidth, &windowHeight);
     glViewport(0, 0, windowWidth, windowHeight);
 
-    particles->render(window, camera);
+    // particles->render(window, camera);
+
+
+    shader->activate();
+    renderNode(rootNode);
     cloud->render(camera);
-
-    // shader->activate();
-    // renderNode(rootNode);
-
 }
 
 void renderUI(void) {
