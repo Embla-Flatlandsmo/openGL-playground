@@ -19,7 +19,10 @@ CloudBox::CloudBox(glm::vec3 low, glm::vec3 high)
 {
     boxLow = low;
     boxHigh = high;
-
+    rayMarchCloud = new Gloom::Shader();
+    rayMarchCloud->attach("../res/shaders/volume_render/ray_march.comp");
+    rayMarchCloud->link();
+    // screen = new ScreenQuad();
     renderCloud = new Gloom::Shader();
     renderCloud->makeBasicShader("../res/shaders/cloud.vert", "../res/shaders/cloud.frag");
     // renderCloud->makeBasicShader("../res/shaders/simple.vert", "../res/shaders/simple.frag");
@@ -40,30 +43,56 @@ CloudBox::CloudBox(glm::vec3 low, glm::vec3 high)
 
 void CloudBox::render(Gloom::Camera *camera)
 {
-    renderCloud->activate();
+
 
     glm::mat4 projection = glm::perspective(glm::radians(80.0f), float(windowWidth) / float(windowHeight), 0.1f, 350.f);
     glm::mat4 VP = projection * camera->getViewMatrix();
     glm::mat4 inverse_mvp = glm::inverse(VP);
     glm::vec3 camera_position = glm::vec3(camera->getViewMatrix()[3]);
-
-
-    glUniformMatrix4fv(renderCloud->getUniformFromName("MVP"), 1, GL_FALSE, glm::value_ptr(VP));
-    glUniform1f(renderCloud->getUniformFromName("iTime"), (float)glfwGetTime());
-    glUniformMatrix4fv(renderCloud->getUniformFromName("inv_vp"), 1, false, glm::value_ptr(inverse_mvp));
-    glUniformMatrix4fv(renderCloud->getUniformFromName("inv_view"), 1, false, glm::value_ptr(glm::inverse(camera->getViewMatrix())));
-    glUniformMatrix4fv(renderCloud->getUniformFromName("inv_proj"), 1, false, glm::value_ptr(glm::inverse(projection)));
-    glUniform3fv(renderCloud->getUniformFromName("cam_pos"), 1, glm::value_ptr(camera_position));
-    glUniform4fv(renderCloud->getUniformFromName("viewport"), 1, glm::value_ptr(glm::vec4(0.0,0.0, windowWidth, windowHeight)));
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTextureUnit(GL_TEXTURE_3D, perlinTex);
-
-    glActiveTexture(GL_TEXTURE1);
-    glBindTextureUnit(GL_TEXTURE_3D, worley32);    
     
-    glBindVertexArray(vao);
-    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
+    rayMarchCloud->activate();
+    // glBindTextureUnit(GL_TEXTURE0 + 1, perlinTex);
+    // glBindImageTexture(GL_TEXTURE0 + 1, perlinTex, 0, GL_TRUE, 0, GL_READ_ONLY, GL_RGBA8);
+    glUniform3fv(rayMarchCloud->getUniformFromName("AABBmin"), 1, glm::value_ptr(boxLow));
+    glUniform3fv(rayMarchCloud->getUniformFromName("AABBmax"), 1, glm::value_ptr(boxHigh));
+    glUniform3fv(rayMarchCloud->getUniformFromName("VolumeGridSize"), 1, glm::value_ptr(glm::vec3(128,128,128))); // Input to generateTexture3D in init
+    glUniformMatrix4fv(rayMarchCloud->getUniformFromName("u_CameraLookAt"), 1, GL_FALSE, glm::value_ptr(camera->getViewMatrix()));
+    glUniformMatrix4fv(rayMarchCloud->getUniformFromName("ProjectionMatrix"), 1, GL_FALSE, glm::value_ptr(projection));
+    glUniform1f(rayMarchCloud->getUniformFromName("u_TanCameraFovY"), float(tan(glm::radians(80.0f)/2.0)));
+    glUniform1f(rayMarchCloud->getUniformFromName("u_CameraAspectRatio"), float(windowWidth) / float(windowHeight));
+    glUniform3fv(rayMarchCloud->getUniformFromName("CameraEye"), 1, glm::value_ptr(camera_position));
+    glUniform1f(rayMarchCloud->getUniformFromName("StepSize"), 0.5f);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_3D, perlinTex);
+    glUniform1i(rayMarchCloud->getUniformFromName("perlin"), 0);
+    // glBindTextureUnit(GL_TEXTURE0, screen->texture);
+    // glBindImageTexture(
+    //     /*unit=*/0,
+    //     /*texture=*/screen->texture,
+    //     /*level=*/)
+    glBindImageTexture(0, screen.texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);
+    glDispatchCompute(INT_CEIL(windowWidth,8), INT_CEIL(windowHeight,8), 1);
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+    rayMarchCloud->deactivate();
+    screen.draw();
+    // renderCloud->activate();
+
+    // glUniformMatrix4fv(renderCloud->getUniformFromName("MVP"), 1, GL_FALSE, glm::value_ptr(VP));
+    // glUniform1f(renderCloud->getUniformFromName("iTime"), (float)glfwGetTime());
+    // glUniformMatrix4fv(renderCloud->getUniformFromName("inv_vp"), 1, false, glm::value_ptr(inverse_mvp));
+    // glUniformMatrix4fv(renderCloud->getUniformFromName("inv_view"), 1, false, glm::value_ptr(glm::inverse(camera->getViewMatrix())));
+    // glUniformMatrix4fv(renderCloud->getUniformFromName("inv_proj"), 1, false, glm::value_ptr(glm::inverse(projection)));
+    // glUniform3fv(renderCloud->getUniformFromName("cam_pos"), 1, glm::value_ptr(camera_position));
+    // glUniform4fv(renderCloud->getUniformFromName("viewport"), 1, glm::value_ptr(glm::vec4(0.0,0.0, windowWidth, windowHeight)));
+
+    // glActiveTexture(GL_TEXTURE0);
+    // glBindTextureUnit(GL_TEXTURE_3D, perlinTex);
+
+    // glActiveTexture(GL_TEXTURE1);
+    // glBindTextureUnit(GL_TEXTURE_3D, worley32);    
+    
+    // glBindVertexArray(vao);
+    // glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
 }
 
 void CloudBox::generateTextures()
@@ -80,13 +109,13 @@ void CloudBox::generateTextures()
     perlinWorley->activate();
     glUniform3fv(perlinWorley->getUniformFromName("u_resolution"), 1, glm::value_ptr(glm::vec3(128, 128, 128)));
     std::cout << "computing perlinworley!" << std::endl;
-    glActiveTexture(GL_TEXTURE0);
     glUniform1i(perlinWorley->getUniformFromName("outVolTex"), 0);
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_3D, this->perlinTex);
     glBindImageTexture(0, this->perlinTex, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
     glDispatchCompute(INT_CEIL(128, 4), INT_CEIL(128, 4), INT_CEIL(128, 4));
     std::cout << "computed!!" << std::endl;
-    //glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
     glGenerateMipmap(GL_TEXTURE_3D);
 
     //compute shaders

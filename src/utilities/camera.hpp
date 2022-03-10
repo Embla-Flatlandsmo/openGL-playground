@@ -122,7 +122,14 @@ namespace Gloom
 
             if (keysInUse[GLFW_KEY_Q])  // vertical down
                 fMovement -= dirY;
-            
+            if (keysInUse[GLFW_KEY_UP])
+                fPitch -= 1.0;
+            if (keysInUse[GLFW_KEY_DOWN])
+                fPitch += 1.0;
+            if (keysInUse[GLFW_KEY_RIGHT])
+                fYaw += 1.0;
+            if (keysInUse[GLFW_KEY_LEFT])
+                fYaw -= 1.0;
             if (keysInUse[GLFW_KEY_N]) // Neutral rotation
                 cQuaternion = glm::quat(glm::vec3(0, 0, 0));
 

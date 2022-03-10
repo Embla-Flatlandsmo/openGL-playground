@@ -43,20 +43,10 @@ void runProgram(GLFWwindow* window, CommandLineOptions options)
 	    // Clear colour and depth buffers
 	    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // ImGui_ImplOpenGL3_NewFrame();
-        // ImGui_ImplGlfw_NewFrame();
-        // ImGui::NewFrame();
-
-
         updateFrame(window);
         renderFrame(window);
         renderUI();
-        // ImGui::Begin("Hello :))))) I'm a cool window!!!!");
-        // ImGui::Text("It's true dawg");
-        // ImGui::End();
-
-        // ImGui::Render();
-        // ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+       
         // Handle other events
         glfwPollEvents();
         handleKeyboardInput(window);

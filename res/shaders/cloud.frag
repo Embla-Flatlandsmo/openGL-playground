@@ -27,7 +27,8 @@ void main(void)
 		(gl_DepthRange.far - gl_DepthRange.near);
 	ndcPos.w = 1.0;
 
-
+	vec3 volExtentMin = vec3(-1.0);
+	vec3 volExtentMax = vec3(1.0);
 	// vec4 clipPos = ndcPos / gl_FragCoord.w;
 	// vec4 eyePos = inv_proj * clipPos;
 	// vec4 ray_view = vec4(eyePos.xy, -1.0, 0.0);

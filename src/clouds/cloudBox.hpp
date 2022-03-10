@@ -2,6 +2,7 @@
 // Local headers
 #include <utilities/camera.hpp>
 #include <utilities/shader.hpp>
+#include <screenQuad/screenQuad.hpp>
 
 // System headers
 #include <GLFW/glfw3.h>
@@ -16,10 +17,14 @@ class CloudBox
     private:
         void generateTextures();
         GLuint vao = -1;
+
+        ScreenQuad screen;
+
         glm::vec3 boxLow;
         glm::vec3 boxHigh;
 
         Gloom::Shader* renderCloud;
+        Gloom::Shader* rayMarchCloud;
 
         Gloom::Shader* perlinWorley;
         Gloom::Shader* worley;

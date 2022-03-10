@@ -49,7 +49,7 @@ SceneNode* boxNode;
 SceneNode* ballNode;
 SceneNode* padNode;
 
-SceneNode* cloudNode;
+// SceneNode* cloudNode;
 
 
 double ballRadius = 3.0f;
@@ -142,12 +142,12 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
 
 
 
-    Mesh cloud = cube(glm::vec3(10,10,10), glm::vec2(90), false, false);
-    unsigned int cloudVAO = generateBuffer(cloud);
-    cloudNode = createSceneNode();
-    cloudNode->vertexArrayObjectID = cloudVAO;
-    cloudNode->VAOIndexCount = cloud.indices.size();
-    rootNode->children.push_back(cloudNode);
+    // Mesh cloud = cube(glm::vec3(10,10,10), glm::vec2(90), false, false);
+    // unsigned int cloudVAO = generateBuffer(cloud);
+    // cloudNode = createSceneNode();
+    // cloudNode->vertexArrayObjectID = cloudVAO;
+    // cloudNode->VAOIndexCount = cloud.indices.size();
+    // rootNode->children.push_back(cloudNode);
     getTimeDeltaSeconds();
 
     std::cout << "Ready. Click to start!" << std::endl;
@@ -216,8 +216,8 @@ void renderFrame(GLFWwindow* window) {
     // particles->render(window, camera);
 
 
-    shader->activate();
-    renderNode(rootNode);
+    // shader->activate();
+    // renderNode(rootNode);
     cloud->render(camera);
 }
 
