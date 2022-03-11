@@ -1,7 +1,9 @@
 # openGL playground
-For playing around with openGL in C++.
+For playing around with openGL in C++. Please note that this repo is actively being updated. Some code might be bloated as I do some refactoring passes every now and then.
 
 The starter code is lifted from https://github.com/bartvbl/TDT4230-Assignment-1
+
+As of right now, `main` implements the boids algorithm, optimized by using a regular grid. The `raytracing` branch (aims to) implement ray-traced clouds. By mid-april 2023, the goal is to incorporate the two into one coherent scene!
  
 ![The state of it right now](the-state-of-it.gif)
 
