@@ -1,5 +1,5 @@
 # openGL playground
-For playing around with openGL in C++.
+For playing around with openGL in C++. This branch is for my cloud shenanigans!
 
 The starter code is lifted from https://github.com/bartvbl/TDT4230-Assignment-1
  
@@ -24,7 +24,11 @@ The starter code is lifted from https://github.com/bartvbl/TDT4230-Assignment-1
 - [ ] Come up with a good way to structure the program
 ### Clouds
 - [x] Parametric rendering in fragment shader
-- [ ] Use CPU camera to do viewing transform in frag shader
+- [x] Use CPU camera to do viewing transform in frag shader
+- [x] Ray tracing in compute shader
+- [x] Sample texture in compute shader
+- [ ] Implement clouds simulation
+- [ ] Implement depth-checking for ray tracing in compute shader
 
 
 ### Less important TODOs:

@@ -61,7 +61,17 @@ void CloudBox::render(Gloom::Camera *camera)
     glUniform1f(rayMarchCloud->getUniformFromName("u_TanCameraFovY"), float(tan(glm::radians(80.0f)/2.0)));
     glUniform1f(rayMarchCloud->getUniformFromName("u_CameraAspectRatio"), float(windowWidth) / float(windowHeight));
     glUniform3fv(rayMarchCloud->getUniformFromName("CameraEye"), 1, glm::value_ptr(camera_position));
-    glUniform1f(rayMarchCloud->getUniformFromName("StepSize"), 0.5f);
+    glUniform1f(rayMarchCloud->getUniformFromName("StepSize"), 5.0f);
+
+    glUniform1f(rayMarchCloud->getUniformFromName("iTime"), (float)glfwGetTime());
+    glUniformMatrix4fv(rayMarchCloud->getUniformFromName("inv_vp"), 1, false, glm::value_ptr(inverse_mvp));
+    glUniformMatrix4fv(rayMarchCloud->getUniformFromName("inv_view"), 1, false, glm::value_ptr(glm::inverse(camera->getViewMatrix())));
+    glUniformMatrix4fv(rayMarchCloud->getUniformFromName("inv_proj"), 1, false, glm::value_ptr(glm::inverse(projection)));
+    glUniform3fv(rayMarchCloud->getUniformFromName("cam_pos"), 1, glm::value_ptr(camera_position));
+    glUniform4fv(rayMarchCloud->getUniformFromName("viewport"), 1, glm::value_ptr(glm::vec4(0.0,0.0, windowWidth, windowHeight)));
+
+
+
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_3D, perlinTex);
     glUniform1i(rayMarchCloud->getUniformFromName("perlin"), 0);

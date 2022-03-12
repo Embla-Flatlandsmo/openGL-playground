@@ -137,17 +137,9 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     rootNode->children.push_back(boxNode);
     boxNode->vertexArrayObjectID = boxVAO;
     boxNode->VAOIndexCount = box.indices.size();
-    cloud = new CloudBox(glm::vec3(10.,10.,10.), glm::vec3(40., 40., 40.));
+    cloud = new CloudBox(glm::vec3(100.,100.,100.), glm::vec3(400., 400., 400.)); // Why is it multiplied by 10?
     particles = new ParticleSystem(glm::vec3(10.,10.,10.), glm::vec3(40., 40., 40.));
-
-
-
-    // Mesh cloud = cube(glm::vec3(10,10,10), glm::vec2(90), false, false);
-    // unsigned int cloudVAO = generateBuffer(cloud);
-    // cloudNode = createSceneNode();
-    // cloudNode->vertexArrayObjectID = cloudVAO;
-    // cloudNode->VAOIndexCount = cloud.indices.size();
-    // rootNode->children.push_back(cloudNode);
+    
     getTimeDeltaSeconds();
 
     std::cout << "Ready. Click to start!" << std::endl;
@@ -213,11 +205,11 @@ void renderFrame(GLFWwindow* window) {
     glfwGetWindowSize(window, &windowWidth, &windowHeight);
     glViewport(0, 0, windowWidth, windowHeight);
 
-    // particles->render(window, camera);
+    particles->render(window, camera);
 
 
-    // shader->activate();
-    // renderNode(rootNode);
+    shader->activate();
+    renderNode(rootNode);
     cloud->render(camera);
 }
 
