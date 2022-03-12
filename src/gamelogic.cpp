@@ -137,9 +137,9 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     rootNode->children.push_back(boxNode);
     boxNode->vertexArrayObjectID = boxVAO;
     boxNode->VAOIndexCount = box.indices.size();
-    cloud = new CloudBox(glm::vec3(100.,100.,100.), glm::vec3(400., 400., 400.)); // Why is it multiplied by 10?
+    cloud = new CloudBox(glm::vec3(10.,10.,10.), glm::vec3(40., 40., 40.)); // Why is it multiplied by 10?
     particles = new ParticleSystem(glm::vec3(10.,10.,10.), glm::vec3(40., 40., 40.));
-    
+
     getTimeDeltaSeconds();
 
     std::cout << "Ready. Click to start!" << std::endl;
@@ -238,6 +238,7 @@ void renderUI(void) {
                         ImGui::GetIO().Framerate);
     ImGui::End();
 
+    cloud->renderUI();
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

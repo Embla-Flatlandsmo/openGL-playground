@@ -7,6 +7,11 @@
 #include <utilities/camera.hpp>
 #include <utilities/texture.hpp>
 
+
+#include "utilities/imgui/imgui.h"
+#include "utilities/imgui/imgui_impl_glfw.h"
+#include "utilities/imgui/imgui_impl_opengl3.h"
+
 // System headers
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -61,7 +66,7 @@ void CloudBox::render(Gloom::Camera *camera)
     glUniform1f(rayMarchCloud->getUniformFromName("u_TanCameraFovY"), float(tan(glm::radians(80.0f)/2.0)));
     glUniform1f(rayMarchCloud->getUniformFromName("u_CameraAspectRatio"), float(windowWidth) / float(windowHeight));
     glUniform3fv(rayMarchCloud->getUniformFromName("CameraEye"), 1, glm::value_ptr(camera_position));
-    glUniform1f(rayMarchCloud->getUniformFromName("StepSize"), 5.0f);
+    glUniform1f(rayMarchCloud->getUniformFromName("StepSize"), step_size);
 
     glUniform1f(rayMarchCloud->getUniformFromName("iTime"), (float)glfwGetTime());
     glUniformMatrix4fv(rayMarchCloud->getUniformFromName("inv_vp"), 1, false, glm::value_ptr(inverse_mvp));
@@ -161,4 +166,20 @@ void CloudBox::generateTextures()
 	// 	seed = scene->seed;
 	// 	oldSeed = seed;
 	// }
+}
+
+void CloudBox::renderUI()
+{
+    ImGui::Begin("Clouds properties");
+    ImGui::SliderFloat("Step size", &step_size, 0.5f, 3.f);
+    // ImGui::SliderFloat("Size", &(particles->boidProperties.size), 0.1f, 2.0f);
+    // ImGui::SliderFloat("Cohesion", &(particles->boidProperties.cohesion_factor), 0.0f, 1.5f);
+    // ImGui::SliderFloat("Alignment", &(particles->boidProperties.alignment_factor), 0.0f, 1.5f);
+    // ImGui::SliderFloat("Separation", &(particles->boidProperties.separation_factor), 0.0f, 1.5f);
+    // ImGui::SliderFloat("Separation Range", &(particles->boidProperties.separation_range), 0.0f, 3.0f); // Max is view range
+    // ImGui::SliderFloat("Boundary avoidance", &(particles->boidProperties.boundary_avoidance_factor), 0.0f, 0.2f);
+    // ImGui::SliderFloat("dt", &(particles->boidProperties.dt), 0.0f, 2.0);
+    // ImGui::SliderFloat("Max velocity", &(particles->boidProperties.max_vel), 0.0f, 4.0f);
+    // ImGui::Checkbox("Wrap around", &(particles->boidProperties.wrap_around));
+    ImGui::End();
 }

@@ -14,6 +14,7 @@ class CloudBox
         CloudBox(glm::vec3 low, glm::vec3 high);
         ~CloudBox();
         void render(Gloom::Camera *camera);
+        void renderUI(void);
     private:
         void generateTextures();
         GLuint vao = -1;
@@ -31,4 +32,7 @@ class CloudBox
 
         GLuint perlinTex = 0;
         GLuint worley32 = 0;
+
+        float step_size = 0.5f;
+        float texture_scale = 1.0f;
 };

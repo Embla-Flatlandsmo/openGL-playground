@@ -4,19 +4,9 @@ uniform sampler3D perlin;
 // layout (binding = 2) uniform sampler1D TexTransferFunc;
 // layout (binding = 3) uniform sampler3D TexVolumeGradient;
 
-// uniform vec3 VolumeGridResolution;
-// uniform vec3 VolumeVoxelSize;
 uniform vec3 VolumeGridSize;
 uniform vec3 AABBmin;
 uniform vec3 AABBmax;
-
-uniform vec3 CameraEye; // Cam pos
-
-uniform mat4 u_CameraLookAt; // View matrix
-uniform mat4 ProjectionMatrix;
-
-uniform float u_TanCameraFovY;
-uniform float u_CameraAspectRatio;
 
 uniform float StepSize;
 
@@ -24,27 +14,11 @@ uniform mat4 inv_vp;
 uniform mat4 inv_view;
 uniform mat4 inv_proj;
 uniform vec4 viewport;
-uniform vec3 cam_pos;
-
-
-// uniform vec3 VolumeScales;
-
-// uniform int ApplyGradientPhongShading;
-
-// uniform vec3 WorldEyePos;
-// uniform vec3 LightSourcePosition;
-
-// uniform int ApplyOcclusion;
-// uniform int ApplyShadow;
 
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 layout (rgba16f, binding = 0) uniform image2D OutputFrag;
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// From _structured_volume_data/ray_bbox_intersection.frag
 struct Ray { vec3 Origin; vec3 Dir; };
-// bool RayAABBIntersection (vec3 vert_eye, vec3 vert_dir, vec3 vol_scaled_dim,
-//                           out Ray r, out float rtnear, out float rtfar);
 
 bool IntersectBox (Ray r, vec3 boxmin, vec3 boxmax, out float tnear, out float tfar)
 {
@@ -62,26 +36,6 @@ bool IntersectBox (Ray r, vec3 boxmin, vec3 boxmax, out float tnear, out float t
   return tfar > tnear;
 }
 
-// bool RayAABBIntersection (vec3 vert_eye, vec3 vert_dir, vec3 vol_scaled_dim,
-//                           out Ray r, out float rtnear, out float rtfar)
-// {
-//   // vec3 aabbmin = -vol_scaled_dim * 0.5;
-//   // vec3 aabbmax =  vol_scaled_dim * 0.5;
-
-//   r.Origin = vert_eye;
-//   r.Dir = normalize(vert_dir);
-  
-//   float tnear, tfar;
-//   bool hit = IntersectBox(r, AABBmin, AABBmax, tnear, tfar);
-
-//   tnear = max(tnear, 0.0);
-
-//   rtnear = tnear;
-//   rtfar  = tfar;
-
-//   return hit;
-// }
-
 bool RayAABBIntersection (Ray r, vec3 bbmin, vec3 bbmax, 
                           out float rtnear, out float rtfar)
 {
@@ -97,8 +51,6 @@ bool RayAABBIntersection (Ray r, vec3 bbmin, vec3 bbmax,
   return hit;
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
-
 vec4 sampleDensity(vec3 rayPos)
 {
   vec3 bbsize = AABBmax-AABBmin;
@@ -111,27 +63,19 @@ vec4 sampleDensity(vec3 rayPos)
   // vec3 uvw = (size*0.5 + rayPos);
 }
 
-// vec3 computeClipSpaceCoord(uvec2 fragCoord){
-// 	vec2 ray_nds = 2.0*vec2(fragCoord.xy)/viewport.zw - 1.0;
-// 	return vec3(ray_nds, 1.0);
-// }
-
 // Finds fragment coordinate fragCoord.x = [0,1920], fragCoord.y=[0,1080]
 // and converts it to normalized device coordinates [-1, 1]
-vec3 fragToNDC(uvec2 fragCoord)
+vec3 fragToClipSpace(uvec2 fragCoord)
 {
   vec2 ndc = 2.0*vec2(fragCoord.xy-viewport.xy)/viewport.zw - 1.0;
   return vec3(ndc, -1.0);
 }
 
-// Normalized Device Coordinates [-1,1] to screen position [0,1]
+// Normalized Device Coordinates (Clip Space coordinates) [-1,1] to screen position [0,1]
 vec2 ndcToScreenPos(vec2 ndc)
 {
   return (ndc*0.5+0.5);
 }
-
-//#define USE_TRANSPARENCY
-//#define USE_TRANSPARENCY_DS
 
 void main()
 {
@@ -140,43 +84,36 @@ void main()
 
   if (fragCoord.x > size.x || fragCoord.y > size.y) return;
 
-
-
   Ray r;
 
-  // Camera direction
-  // vec4 ray_origin_ndc = vec4(fragToNDC(fragCoord), 1.0);
-  // vec3 camera_dir = normalize(vec3(ray_origin_ndc.x * u_TanCameraFovY * u_CameraAspectRatio, ray_origin_ndc.y * u_TanCameraFovY, -1.0) * mat3(u_CameraLookAt));
-  // r.Dir = camera_dir;
-  // r.Origin = CameraEye;
+  // Create ray origin and direction
+  // Transfer from screen space -> clip space -> world space 
 
-  // Go from screen space to world space
-  // vec4 ray_origin_ndc = vec4(fragToNDC(fragCoord), 1.0);
-  // vec4 ray_direction_ndc = vec4(0, 0, -1, 1);
-  // ray_origin_ndc = inv_vp*ray_origin_ndc;
-  // ray_direction_ndc = inv_vp*ray_direction_ndc;
-  // ray_origin = vec4(ray_origin_ndc, -1.0, 0.0);
-  // r.Origin = ray_origin_ndc.xyz/ray_origin_ndc.w;
-  // r.Dir = normalize(ray_direction_ndc.xyz/ray_direction_ndc.w);
+  // The ray is at clipspace coords x,y and shoots a ray into the scene, (i.e. z=1)
+  vec4 ray_dir_ndc = vec4(fragToClipSpace(fragCoord).xy, 1.0 , 1.0);
+  vec4 ray_dir_view = inv_proj*ray_dir_ndc;
 
-  vec4 ray_clip = vec4(fragToNDC(fragCoord), 1.0);
-  vec4 ray_view = inv_proj*ray_clip;
-  // ray_view = inv_view * ray_view;
-  // ray_view = ray_view/ray_view.w;
-  // ray_view = ray_view / ray_view.w;
-  // vec3 worldDir = (ray_view).xyz;
-  ray_view = vec4(ray_view.xy, -1.0, 0.0);
-  vec3 worldDir = (inv_view * ray_view).xyz;
-  worldDir = normalize(worldDir);
+  // I don't know why this works, but it does
+  ray_dir_view = vec4(ray_dir_view.xy, -1.0, 0.0);
+  vec4 ray_dir_world = (inv_view*ray_dir_view);
 
-  vec4 ray_origin_ndc = vec4(fragToNDC(fragCoord), 1.0);
+  // Doing it like this makes it a bit distorted
+  // vec4 ray_dir_world = inv_vp*ray_dir_ndc;
+  // ray_dir_world = ray_dir_world/ray_dir_world.w;
+
+  // The same for ray origin, only that this time the coordinate starts at the near plane, i.e. z=-1
+  vec4 ray_origin_ndc = vec4(fragToClipSpace(fragCoord), 1.0);
   vec4 ray_origin_world = inv_vp*ray_origin_ndc;
-  // ray_origin_ndc = inv_vp*ray_origin_ndc;
-  r.Origin = ray_origin_world.xyz;
-  r.Dir = worldDir;
+  ray_origin_world = ray_origin_world/ray_origin_world.w;
 
-  // r.Origin = ray_origin_ndc.xyz;
-  // r.Dir = normalize(ray_direction_ndc).xyz;
+  // From https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-generating-camera-rays/generating-camera-rays
+  // Doesn't work, though!
+  // vec4 rayPWorld = inv_vp*vec4(fragToClipSpace(fragCoord), 1.0);
+  // r.Dir = normalize((rayPWorld/rayPWorld.w - ray_origin_world).xyz);
+
+
+  r.Origin = ray_origin_world.xyz;
+  r.Dir = normalize(ray_dir_world.xyz);
 
   float tnear, tfar;
   bool hit = RayAABBIntersection(r, AABBmin, AABBmax, tnear, tfar);
@@ -186,10 +123,8 @@ void main()
   if (hit)
   {
     vec3 rayPos = r.Origin + r.Dir*tnear;
-    // dst.a = 1.0;
     for (int i = 0; i < 200; i++)
     {
-      // dst.a = 1.0; // For debugging
       vec4 val = sampleDensity(rayPos);
       float scalar = (val.r+val.g+val.b)/3.0;
       // float scalar = 1.0;
@@ -199,133 +134,12 @@ void main()
 
       // dst.a += (1.0-dst.a)*scalar*0.1;
       if (dst.a > 0.8) break;
-      rayPos += r.Dir*StepSize;
-      if (rayPos.x > AABBmax.x || rayPos.y > AABBmax.y || rayPos.z > AABBmax.z) break;
 
+      if (rayPos.x > AABBmax.x || rayPos.y > AABBmax.y || rayPos.z > AABBmax.z) break;
+      if (rayPos.x < AABBmin.x || rayPos.y < AABBmin.y || rayPos.z < AABBmin.z) break;
+      rayPos += r.Dir*StepSize;
     }
   }
 
   imageStore(OutputFrag, fragCoord, dst);
 }
-
-
-
-// void main ()
-// {
-//   ivec2 storePos = ivec2(gl_GlobalInvocationID.xy);
-//   ivec2 fragCoord = ivec2(gl_GlobalInvocationID.xy);
-  
-//   ivec2 size = imageSize(OutputFrag);
-//   if (fragCoord.x < size.x && fragCoord.y < size.y)
-//   {
-
-//     vec4 ray_clip = vec4(computeClipSpaceCoord(fragCoord), 1.0);
-//     vec4 ray_view = inv_proj * ray_clip;
-//     ray_view = vec4(ray_view.xy, -1.0, 0.0);
-//     vec3 worldDir = (inv_view * ray_view).xyz;
-//     worldDir = normalize(worldDir);
-//     // Get screen position [x, y] and consider centering the pixel by + 0.5
-//     vec2 fpos = vec2(storePos) + 0.5;
-
-//     // Transform fpos from [w, h] to [0, 1] to [-1, 1]
-//     vec3 VerPos = (vec3(fpos.x / float(size.x), fpos.y / float(size.y), 0.0) * 2.0) - 1.0;
-
-//     // Camera direction
-//     vec3 camera_dir = normalize(vec3(VerPos.x * u_TanCameraFovY * u_CameraAspectRatio, VerPos.y * u_TanCameraFovY, -1.0) * mat3(u_CameraLookAt));
-//     // Find Ray Intersection
-//     Ray r; float tnear, tfar;
-//     bool inbox = RayAABBIntersection(CameraEye, camera_dir, VolumeGridSize, r, tnear, tfar);
-
-//     // If inside volume grid
-//     vec4 dst = vec4(vec3(1.0),0.0);
-//     if(inbox)
-//     {
-//       // Distance to be evaluated
-//       float D = abs(tfar - tnear);
-//       vec3 rayPos = r.Origin + r.Dir*tnear;
-//       for (int i = 0; i < 200; i++) 
-//       {
-//         vec4 val = sampleDensity(rayPos);
-//         // float scalar = (val.r+val.g+val.b)/3.0;
-//         float scalar = val.r;
-//         if (val.r > 0.85)
-//           dst.a += (1.0-dst.a)*scalar*0.1;
-        
-//         // dst.a += (1.0-dst.a)*scalar*0.1;
-//         if (dst.a > 0.5) break;
-//         if (rayPos.x > AABBmax.x || rayPos.y > AABBmax.y || rayPos.z > AABBmax.z) break;
-//         rayPos += r.Dir*StepSize;
-//       }
-
-//       // // Initialize Transparency and Radiance color
-//       // // #ifdef USE_TRANSPARENCY
-//       // //       vec4 dst = vec4(vec3(0.0),1.0);
-//       // // #else
-//       // //       vec4 dst = vec4(0.0);
-//       // // #endif
-//       // // World position at tnear, translated to the volume [0, VolumeGridSize]
-//       // vec3 wld_pos = r.Origin + r.Dir * tnear;
-//       // // Texture position
-//       // // vec3 tex_pos = wld_pos + (VolumeGridSize * 0.5);
-//       // vec3 tex_pos = wld_pos + (VolumeGridSize * 0.5);
-
-//       // // Evaluate from 0 to D...
-//       // for(float s = 0.0; s < D;)
-//       // {
-//       //   // Get the current step or the remaining interval
-//       //   float h = min(StepSize, D - s);
-      
-//       //   // Texture position at tnear + (s + h/2)
-//       //   vec3 s_tex_pos = tex_pos  + r.Dir * (s + h * 0.5);
-      
-//       //   // Get normalized density from volume
-//       //   // float density = texture(perlin, s_tex_pos / VolumeGridSize).r;
-        
-//       //   // // Get color from transfer function given the normalized density
-//       //   // vec4 src = 
-//       //   //   //vec4(density)
-//       //   //   texture(TexTransferFunc, density)
-//       //   // ;
-       
-//       //   // if sample is non-transparent
-//       //   vec4 src = texture(perlin, s_tex_pos/VolumeGridSize);
-//       //   // vec4 src = vec4(1.0);
-//       //   if(src.a > 0.0)
-//       //   {
-//       //     float scalar = (src.r+src.g+src.b)/3.0;
-//       //     // float scalar = vec4(1.0);
-//       //     // float scalar = src.r;
-//       //     // float scalar = 0.1;
-//       //     dst.a += (1.0-dst.a)*scalar;
-//       // // #ifdef USE_TRANSPARENCY
-//       // //   #ifdef USE_TRANSPARENCY_DS
-//       // //           dst.rgb = dst.rgb + dst.a * src.a * src.rgb * h;
-//       // //           dst.a = dst.a * exp(-src.a * h);
-//       // //   #else
-//       // //           float F = exp(-src.a * h);
-//       // //           dst.rgb = dst.rgb + dst.a * src.rgb * (1.0 - F);
-//       // //           dst.a = dst.a * F;
-//       // //   #endif
-//       // //           if ((1.0 - dst.a) > 0.99) break;
-//       // // #else
-//       // //           // Evaluate the current opacity
-//       // //           src.a = 1.0 - exp(-src.a * h);
-                
-//       // //           // Front-to-back composition
-//       // //           src.rgb = src.rgb * src.a;
-//       // //           dst = dst + (1.0 - dst.a) * src;
-          
-//       //     // Opacity threshold: 99%
-//       //     if (dst.a > 0.99) break;
-//       //   }
-//       //   // Go to the next interval
-//       //   s = s + h;
-//       // }
-// // #ifdef USE_TRANSPARENCY
-// //       dst.a = 1.0 - dst.a;
-// // #endif
-
-//     }
-//     imageStore(OutputFrag, storePos, dst);
-//   }
-// }
