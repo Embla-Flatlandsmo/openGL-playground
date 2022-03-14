@@ -27,11 +27,11 @@ ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
     particleAccs = new struct acc[NUM_PARTICLES];
 
     colorShader = new Gloom::Shader();
-    colorShader->makeBasicShader("../res/shaders/particle.vert", "../res/shaders/particle.frag");
+    colorShader->makeBasicShader("../res/shaders/boids/particle.vert", "../res/shaders/boids/particle.frag");
 
     // The compute shader must be in its own program
     computeShader = new Gloom::Shader();
-    computeShader->attach("../res/shaders/particle.comp");
+    computeShader->attach("../res/shaders/boids/particle.comp");
     computeShader->link();
 
     // We set the uniforms for the bounding box in the compute shader only once
@@ -43,7 +43,7 @@ ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
     computeShader->deactivate();
 
     forceShader = new Gloom::Shader();
-    forceShader->attach("../res/shaders/computeForce.comp");
+    forceShader->attach("../res/shaders/boids/computeForce.comp");
     forceShader->link();
 
     // We set the uniforms for the bounding box in the compute shader only once
@@ -236,11 +236,11 @@ void ParticleSystem::initParticles()
 void ParticleSystem::initGridSorting() 
 {
     prefixSumShader = new Gloom::Shader();
-    prefixSumShader->attach("../res/shaders/prefixSum.comp");
+    prefixSumShader->attach("../res/shaders/boids/prefixSum.comp");
     prefixSumShader->link();
 
     gridBucketsShader = new Gloom::Shader();
-    gridBucketsShader->attach("../res/shaders/gridBuckets.comp");
+    gridBucketsShader->attach("../res/shaders/boids/gridBuckets.comp");
     gridBucketsShader->link();
     gridBucketsShader->activate();
     glUniform3fv(gridBucketsShader->getUniformFromName("boundingBoxLow"), 1, glm::value_ptr(boundingBox->low));
@@ -250,7 +250,7 @@ void ParticleSystem::initGridSorting()
     gridBucketsShader->deactivate();
     
     reindexShader = new Gloom::Shader();
-    reindexShader->attach("../res/shaders/reindex.comp");
+    reindexShader->attach("../res/shaders/boids/reindex.comp");
     reindexShader->link();
     reindexShader->activate();
     glUniform3fv(reindexShader->getUniformFromName("boundingBoxLow"), 1, glm::value_ptr(boundingBox->low));

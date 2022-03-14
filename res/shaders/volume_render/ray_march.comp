@@ -1,6 +1,7 @@
 #version 430
 
 uniform sampler3D perlin; 
+uniform sampler2D depth;
 // layout (binding = 2) uniform sampler1D TexTransferFunc;
 // layout (binding = 3) uniform sampler3D TexVolumeGradient;
 
@@ -54,13 +55,13 @@ bool RayAABBIntersection (Ray r, vec3 bbmin, vec3 bbmax,
 vec4 sampleDensity(vec3 rayPos)
 {
   vec3 bbsize = AABBmax-AABBmin;
+
   // Bring rayPos to world origin
   vec3 centeredRayPos = rayPos-AABBmin;
+
   // Divide by bbsize to get coordinates on [0,1]
   vec3 uvw = centeredRayPos/bbsize;
-  // uvw[2] = 0;
   return texture(perlin, uvw);
-  // vec3 uvw = (size*0.5 + rayPos);
 }
 
 // Finds fragment coordinate fragCoord.x = [0,1920], fragCoord.y=[0,1080]
@@ -122,6 +123,12 @@ void main()
 
   if (hit)
   {
+    vec4 obstacle_clip_pos = texture(depth, ray_origin_ndc.xy);
+    // float depth = texture(depth, ray_origin_ndc.xy).r;
+
+    vec4 depth_world = inv_vp*vec4(ray_origin_ndc.xy, obstacle_clip_pos.z/255.0, 1.0);
+    depth_world = depth_world/depth_world.w;
+
     vec3 rayPos = r.Origin + r.Dir*tnear;
     for (int i = 0; i < 200; i++)
     {
@@ -137,6 +144,7 @@ void main()
 
       if (rayPos.x > AABBmax.x || rayPos.y > AABBmax.y || rayPos.z > AABBmax.z) break;
       if (rayPos.x < AABBmin.x || rayPos.y < AABBmin.y || rayPos.z < AABBmin.z) break;
+      // if (rayPos.z > depth_world.z) break;
       rayPos += r.Dir*StepSize;
     }
   }

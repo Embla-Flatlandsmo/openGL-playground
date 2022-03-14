@@ -15,8 +15,10 @@ class CloudBox
         ~CloudBox();
         void render(Gloom::Camera *camera);
         void renderUI(void);
+        void setDepthBuffer(GLuint textureID);
     private:
         void generateTextures();
+        void generateWeatherMap();
         GLuint vao = -1;
 
         ScreenQuad screen;
@@ -29,9 +31,11 @@ class CloudBox
 
         Gloom::Shader* perlinWorley;
         Gloom::Shader* worley;
+        Gloom::Shader* weather;
 
         GLuint perlinTex = 0;
         GLuint worley32 = 0;
+        GLuint weatherTex = 0;
 
         float step_size = 0.5f;
         float texture_scale = 1.0f;

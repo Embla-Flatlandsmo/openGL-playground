@@ -62,6 +62,9 @@ Gloom::Camera* camera;
 ParticleSystem* particles;
 CloudBox* cloud;
 
+ScreenQuad* screen;
+
+
 // const glm::vec3 boxDimensions(180, 90, 90);
 const glm::vec3 boxDimensions(300, 150, 150);
 const glm::vec3 padDimensions(30, 3, 40);
@@ -97,10 +100,21 @@ void mouseCallback(GLFWwindow* window, double x, double y) {
 
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     camera->handleMouseButtonInputs(button, action);
+
 }
 
 void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+
     camera->handleKeyboardInputs(key, action);
+    if (action == GLFW_PRESS) {
+        switch(key) 
+        {
+            case GLFW_KEY_U:
+                screen->incrementCurrentEffect();
+            case GLFW_KEY_J:
+                screen->decrementCurrentEffect();
+        }
+    }
 }
 
 void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
@@ -118,7 +132,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     // glfwSetMouseButtonCallback(window, mouseButtonCallback);
     glfwSetKeyCallback(window, keyboardCallback);
 
-
+    screen = new ScreenQuad();
     camera = new Gloom::Camera(glm::vec3(20, 20, 70));
     shader = new Gloom::Shader();
     shader->makeBasicShader("../res/shaders/simple.vert", "../res/shaders/simple.frag");
@@ -195,7 +209,7 @@ void renderNode(SceneNode* node) {
         case SPOT_LIGHT: break;
     }
 
-    for(SceneNode* child : node->children) {
+    for(SceneNode* child : node->children) { 
         renderNode(child);
     }
 }
@@ -205,11 +219,17 @@ void renderFrame(GLFWwindow* window) {
     glfwGetWindowSize(window, &windowWidth, &windowHeight);
     glViewport(0, 0, windowWidth, windowHeight);
 
+    screen->bindFramebuffer();
+
     particles->render(window, camera);
+    // shader->activate();
+    // renderNode(rootNode);
+
+    screen->unbindFramebuffer();
 
 
-    shader->activate();
-    renderNode(rootNode);
+    screen->draw();
+    cloud->setDepthBuffer(screen->depth_texture);
     cloud->render(camera);
 }
 

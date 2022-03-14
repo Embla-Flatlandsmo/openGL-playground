@@ -29,14 +29,14 @@ CloudBox::CloudBox(glm::vec3 low, glm::vec3 high)
     rayMarchCloud->link();
     // screen = new ScreenQuad();
     renderCloud = new Gloom::Shader();
-    renderCloud->makeBasicShader("../res/shaders/cloud.vert", "../res/shaders/cloud.frag");
-    // renderCloud->makeBasicShader("../res/shaders/simple.vert", "../res/shaders/simple.frag");
+    // renderCloud->makeBasicShader("../res/shaders/cloud.vert", "../res/shaders/cloud.frag");
+    // // renderCloud->makeBasicShader("../res/shaders/simple.vert", "../res/shaders/simple.frag");
     
-    renderCloud->activate();
-    glUniform4fv(renderCloud->getUniformFromName("viewport"), 1, glm::value_ptr(glm::vec4(0.,0.,windowWidth, windowHeight)));
-    glUniform2fv(renderCloud->getUniformFromName("boxHigh"), 1, glm::value_ptr(boxHigh));
-    glUniform2fv(renderCloud->getUniformFromName("boxLow"), 1, glm::value_ptr(boxLow));
-    glUniform2fv(renderCloud->getUniformFromName("iResolution"), 1, glm::value_ptr(glm::vec2(windowWidth, windowHeight)));
+    // renderCloud->activate();
+    // glUniform4fv(renderCloud->getUniformFromName("viewport"), 1, glm::value_ptr(glm::vec4(0.,0.,windowWidth, windowHeight)));
+    // glUniform2fv(renderCloud->getUniformFromName("boxHigh"), 1, glm::value_ptr(boxHigh));
+    // glUniform2fv(renderCloud->getUniformFromName("boxLow"), 1, glm::value_ptr(boxLow));
+    // glUniform2fv(renderCloud->getUniformFromName("iResolution"), 1, glm::value_ptr(glm::vec2(windowWidth, windowHeight)));
     Mesh box = cube(glm::vec3(20,20,20), glm::vec2(10), false, false);
     vao = generateBuffer(box);
     
@@ -44,6 +44,13 @@ CloudBox::CloudBox(glm::vec3 low, glm::vec3 high)
     // vao = generateBuffer(screen_quad);
 
     generateTextures();
+}
+
+void CloudBox::setDepthBuffer(GLuint textureID)
+{
+    glActiveTexture(GL_TEXTURE0+1);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glUniform1i(rayMarchCloud->getUniformFromName("depth"), 1);
 }
 
 void CloudBox::render(Gloom::Camera *camera)
@@ -56,36 +63,38 @@ void CloudBox::render(Gloom::Camera *camera)
     glm::vec3 camera_position = glm::vec3(camera->getViewMatrix()[3]);
     
     rayMarchCloud->activate();
-    // glBindTextureUnit(GL_TEXTURE0 + 1, perlinTex);
-    // glBindImageTexture(GL_TEXTURE0 + 1, perlinTex, 0, GL_TRUE, 0, GL_READ_ONLY, GL_RGBA8);
     glUniform3fv(rayMarchCloud->getUniformFromName("AABBmin"), 1, glm::value_ptr(boxLow));
     glUniform3fv(rayMarchCloud->getUniformFromName("AABBmax"), 1, glm::value_ptr(boxHigh));
     glUniform3fv(rayMarchCloud->getUniformFromName("VolumeGridSize"), 1, glm::value_ptr(glm::vec3(128,128,128))); // Input to generateTexture3D in init
-    glUniformMatrix4fv(rayMarchCloud->getUniformFromName("u_CameraLookAt"), 1, GL_FALSE, glm::value_ptr(camera->getViewMatrix()));
-    glUniformMatrix4fv(rayMarchCloud->getUniformFromName("ProjectionMatrix"), 1, GL_FALSE, glm::value_ptr(projection));
-    glUniform1f(rayMarchCloud->getUniformFromName("u_TanCameraFovY"), float(tan(glm::radians(80.0f)/2.0)));
-    glUniform1f(rayMarchCloud->getUniformFromName("u_CameraAspectRatio"), float(windowWidth) / float(windowHeight));
-    glUniform3fv(rayMarchCloud->getUniformFromName("CameraEye"), 1, glm::value_ptr(camera_position));
     glUniform1f(rayMarchCloud->getUniformFromName("StepSize"), step_size);
 
     glUniform1f(rayMarchCloud->getUniformFromName("iTime"), (float)glfwGetTime());
     glUniformMatrix4fv(rayMarchCloud->getUniformFromName("inv_vp"), 1, false, glm::value_ptr(inverse_mvp));
     glUniformMatrix4fv(rayMarchCloud->getUniformFromName("inv_view"), 1, false, glm::value_ptr(glm::inverse(camera->getViewMatrix())));
     glUniformMatrix4fv(rayMarchCloud->getUniformFromName("inv_proj"), 1, false, glm::value_ptr(glm::inverse(projection)));
-    glUniform3fv(rayMarchCloud->getUniformFromName("cam_pos"), 1, glm::value_ptr(camera_position));
     glUniform4fv(rayMarchCloud->getUniformFromName("viewport"), 1, glm::value_ptr(glm::vec4(0.0,0.0, windowWidth, windowHeight)));
 
 
-
+    // Set sampler 0
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_3D, perlinTex);
     glUniform1i(rayMarchCloud->getUniformFromName("perlin"), 0);
+
+    // // Set sampler 1
+    // glActiveTexture(GL_TEXTURE0+1);
+    // glBindTexture(GL_TEXTURE_3D, worley32);
+    // glUniform1i(rayMarchCloud->getUniformFromName("worley"), 1);
+
+    // // Set sampler 2
+    // glActiveTexture(GL_TEXTURE0+2);
+    // glBindTexture(GL_TEXTURE_2D, weatherTex);
+    // glUniform1i(rayMarchCloud->getUniformFromName("weather"), 2);
     // glBindTextureUnit(GL_TEXTURE0, screen->texture);
     // glBindImageTexture(
     //     /*unit=*/0,
     //     /*texture=*/screen->texture,
     //     /*level=*/)
-    glBindImageTexture(0, screen.texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);
+    glBindImageTexture(0, screen.color_texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);
     glDispatchCompute(INT_CEIL(windowWidth,8), INT_CEIL(windowHeight,8), 1);
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
     rayMarchCloud->deactivate();
@@ -154,19 +163,25 @@ void CloudBox::generateTextures()
     glGenerateMipmap(GL_TEXTURE_3D);
 
 
-	////////////////////////
-
-	// if (!weatherTex) {
-	// 	//make texture
-	// 	this->weatherTex = generateTexture2D(1024, 1024);
-
-	// 	//compute
-	// 	generateWeatherMap();
-
-	// 	seed = scene->seed;
-	// 	oldSeed = seed;
-	// }
+    // weather->attach("../res/shaders/cloud/weather.comp");
+    // weather->link();
+    // weatherTex = generateTexture2D(1024, 1024);
+    // generateWeatherMap();
 }
+
+void CloudBox::generateWeatherMap() {
+	weather->activate();
+	// weatherShader->setVec3("seed", 0);
+	// weatherShader->setFloat("perlinFrequency", perlinFrequency);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, this->weatherTex);
+	std::cout << "computing weather!" << std::endl;
+	glDispatchCompute(INT_CEIL(1024, 8), INT_CEIL(1024, 8), 1);
+	std::cout << "weather computed!!" << std::endl;
+
+	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+}
+
 
 void CloudBox::renderUI()
 {

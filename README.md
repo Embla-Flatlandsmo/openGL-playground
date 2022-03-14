@@ -27,6 +27,7 @@ The starter code is lifted from https://github.com/bartvbl/TDT4230-Assignment-1
 - [x] Use CPU camera to do viewing transform in frag shader
 - [x] Ray tracing in compute shader
 - [x] Sample texture in compute shader
+- [x] Multi-texturing (store fragment position in texture)
 - [ ] Implement clouds simulation
 - [ ] Implement depth-checking for ray tracing in compute shader
 

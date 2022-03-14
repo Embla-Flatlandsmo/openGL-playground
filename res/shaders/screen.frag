@@ -5,6 +5,7 @@ out vec4 color;
 in layout(location = 0) vec2 texCoords;
 
 uniform layout(binding=0) sampler2D screenTexture;
+uniform layout(binding=1) sampler2D depthTexture;
 uniform uint effect;
 
 // Same as in screenQuad.hpp
@@ -60,7 +61,10 @@ void main()
 
             break;  
         case INVERT:
-            color = vec4(vec3(1.0 - texture(screenTexture, texCoords)), 1.0);
+            // color = vec4(texture(depthTexture, texCoords).rrr, 1.0);
+            // color = vec4(texture(depthTexture, texCoords).zzz, 1.0);
+            color = vec4(vec3(texture(depthTexture, texCoords).zzz)/255.0, 1.0);
+            // color = vec4(vec3(1.0 - texture(screenTexture, texCoords)), 1.0);
             break;
         case BLUR:
             float gaussian_kernel[9] = float[](

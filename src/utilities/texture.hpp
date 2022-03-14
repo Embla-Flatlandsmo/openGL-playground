@@ -7,3 +7,4 @@
 #include <glad/glad.h>
 
 unsigned int generateTexture3D(int w, int h, int d);
+unsigned int generateTexture2D(int w, int h);

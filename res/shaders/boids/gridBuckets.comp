@@ -1,0 +1,31 @@
+#version 430 core
+
+layout( local_size_x = 1024, local_size_y = 1, local_size_z = 1 ) in;
+
+layout(std140, binding=0) buffer Pos
+{
+    vec4 Positions[];
+};
+
+layout(std430, binding=5) buffer bucketSize
+{
+    uint bucketSizes[];
+};
+
+layout(location=1) uniform vec3 boundingBoxLow;
+layout(location=2) uniform vec3 boundingBoxHigh;
+layout(location=3) uniform uvec3 gridRes;
+layout(location=4) uniform uint numBoids;
+
+void main(void)
+{
+    uint gid = gl_GlobalInvocationID.x;
+    if (gid >= numBoids) {
+        return;
+    }
+    vec3 diagonal = boundingBoxHigh-boundingBoxLow;
+    vec3 range = diagonal/gridRes;
+    uvec3 vgridIdx = uvec3((Positions[gid].xyz-boundingBoxLow)/range);
+    uint cellIdx =  uint(gridRes.x * gridRes.y * vgridIdx.z + gridRes.x * vgridIdx.y + vgridIdx.x);
+    atomicAdd(bucketSizes[cellIdx], 1);
+}

@@ -25,10 +25,12 @@ class ScreenQuad
 
         void incrementCurrentEffect(void);
         void decrementCurrentEffect(void);
-        GLuint texture;
+        GLuint color_texture;
+        GLuint depth_texture;
     private:
         GLuint vao;
         GLuint fb;
+
         Gloom::Shader *screen_shader;
 
         ScreenEffect current_effect = ScreenEffect::NORMAL;
