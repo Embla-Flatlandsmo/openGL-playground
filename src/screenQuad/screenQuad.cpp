@@ -84,12 +84,8 @@ void ScreenQuad::draw(void)
     glUniform1ui(screen_shader->getUniformFromName("effect"), current_effect);
     glBindVertexArray(vao);
     glDisable(GL_DEPTH_TEST);
-    // glBindTextureUnit(0, color_texture);
-    // glBindTextureUnit(1, depth_texture);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, color_texture);
-    glActiveTexture(GL_TEXTURE0+1);
-    glBindTexture(GL_TEXTURE_2D, depth_texture);
+    glBindTextureUnit(0, color_texture);
+    glBindTextureUnit(1, depth_texture);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
     glEnable(GL_DEPTH_TEST);

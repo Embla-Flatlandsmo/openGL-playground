@@ -96,7 +96,8 @@ void CloudBox::render(Gloom::Camera *camera)
     //     /*level=*/)
     glBindImageTexture(0, screen.color_texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);
     glDispatchCompute(INT_CEIL(windowWidth,8), INT_CEIL(windowHeight,8), 1);
-    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+    glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
+    // glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
     rayMarchCloud->deactivate();
     screen.draw();
     // renderCloud->activate();
@@ -130,10 +131,21 @@ void CloudBox::generateTextures()
     //make texture
     this->perlinTex = generateTexture3D(128, 128, 128);
     //compute
-    perlinWorley->activate();
+/*     perlinWorley->activate();
     glUniform3fv(perlinWorley->getUniformFromName("u_resolution"), 1, glm::value_ptr(glm::vec3(128, 128, 128)));
     std::cout << "computing perlinworley!" << std::endl;
     glUniform1i(perlinWorley->getUniformFromName("outVolTex"), 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_3D, this->perlinTex);
+    glBindImageTexture(0, this->perlinTex, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
+    glDispatchCompute(INT_CEIL(128, 4), INT_CEIL(128, 4), INT_CEIL(128, 4));
+    std::cout << "computed!!" << std::endl;
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+    glGenerateMipmap(GL_TEXTURE_3D);
+ */
+    perlinWorley->activate();
+    std::cout << "computing perlinworley!" << std::endl;
+    glUniform1i(perlinWorley->getUniformFromName("noiseTex"), 0);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_3D, this->perlinTex);
     glBindImageTexture(0, this->perlinTex, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);

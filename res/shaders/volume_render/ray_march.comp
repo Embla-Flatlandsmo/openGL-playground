@@ -1,7 +1,8 @@
 #version 430
 
-uniform sampler3D perlin; 
-uniform sampler2D depth;
+layout(binding=0) uniform sampler3D perlin; 
+layout(binding=1) uniform sampler2D weather;
+layout(binding=2) uniform sampler2D depth;
 // layout (binding = 2) uniform sampler1D TexTransferFunc;
 // layout (binding = 3) uniform sampler3D TexVolumeGradient;
 
@@ -19,7 +20,29 @@ uniform vec4 viewport;
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 layout (rgba16f, binding = 0) uniform image2D OutputFrag;
 
+// #define FAST
+
+#ifdef FAST
+	#define STEPS_PRIMARY 16
+#else
+	#define STEPS_PRIMARY 200
+#endif
+
+
+// Takes a number in a given range, and repositions it in a new range
+float remap(float x, float x_min, float x_max, float new_min, float new_max)
+{
+    return (((x - x_min) / (x_max - x_min)) * (new_max - new_min)) + new_min;
+}
+
 struct Ray { vec3 Origin; vec3 Dir; };
+//=============== COORDINATE UTILITIES ===============//
+bool isInsideAABB(vec3 p)
+{
+  float eps = 1e-4;
+  return (p.x > AABBmin.x-eps) && (p.y > AABBmin.y-eps) && (p.z > AABBmin.z-eps) &&
+         (p.x < AABBmax.x+eps) && (p.y < AABBmax.y+eps) && (p.z < AABBmax.z+eps);
+}
 
 bool IntersectBox (Ray r, vec3 boxmin, vec3 boxmax, out float tnear, out float tfar)
 {
@@ -52,17 +75,18 @@ bool RayAABBIntersection (Ray r, vec3 bbmin, vec3 bbmax,
   return hit;
 }
 
-vec4 sampleDensity(vec3 rayPos)
+vec3 uvwFromWorldPos(vec3 pos)
 {
   vec3 bbsize = AABBmax-AABBmin;
 
-  // Bring rayPos to world origin
-  vec3 centeredRayPos = rayPos-AABBmin;
+  // Bring pos to world origin
+  vec3 centered_pos = pos-AABBmin;
 
   // Divide by bbsize to get coordinates on [0,1]
-  vec3 uvw = centeredRayPos/bbsize;
-  return texture(perlin, uvw);
+  return centered_pos/bbsize;
+  // return clamp(centered_pos/bbsize, 0.0, 1.0);
 }
+
 
 // Finds fragment coordinate fragCoord.x = [0,1920], fragCoord.y=[0,1080]
 // and converts it to normalized device coordinates [-1, 1]
@@ -77,6 +101,15 @@ vec2 ndcToScreenPos(vec2 ndc)
 {
   return (ndc*0.5+0.5);
 }
+
+
+//=============== CLOUD UTILITIES ===============//
+vec4 sampleDensity(vec3 rayPos)
+{
+  vec3 uvw = uvwFromWorldPos(rayPos);
+  return texture(perlin, uvw);
+}
+
 
 void main()
 {
@@ -120,17 +153,21 @@ void main()
   bool hit = RayAABBIntersection(r, AABBmin, AABBmax, tnear, tfar);
 
   vec4 dst = vec4(vec3(1.0),0.0);
+  // // float n = 0.1;
+  // // float f = 350.0;
+  // vec4 obstacle_clip_pos = texture(depth, ray_origin_ndc.xy);
+
+  // // vec4 obstacle_world_pos = inv_vp*vec4(obstacle_clip_pos.xy, (obstacle_clip_pos-0.1)/350.0, 1.0);
+  // vec4 obstacle_world_pos = vec4(1.0);
+  // // vec4 depth_world = inv_vp*vec4(ray_origin_ndc.xy, obstacle_clip_pos.z/255.0, 1.0);
+  // obstacle_world_pos = obstacle_world_pos/obstacle_world_pos.w;
+  // obstacle_world_pos.w = 0.97;
 
   if (hit)
   {
-    vec4 obstacle_clip_pos = texture(depth, ray_origin_ndc.xy);
-    // float depth = texture(depth, ray_origin_ndc.xy).r;
-
-    vec4 depth_world = inv_vp*vec4(ray_origin_ndc.xy, obstacle_clip_pos.z/255.0, 1.0);
-    depth_world = depth_world/depth_world.w;
 
     vec3 rayPos = r.Origin + r.Dir*tnear;
-    for (int i = 0; i < 200; i++)
+    for (int i = 0; i < STEPS_PRIMARY; i++)
     {
       vec4 val = sampleDensity(rayPos);
       float scalar = (val.r+val.g+val.b)/3.0;
@@ -142,9 +179,7 @@ void main()
       // dst.a += (1.0-dst.a)*scalar*0.1;
       if (dst.a > 0.8) break;
 
-      if (rayPos.x > AABBmax.x || rayPos.y > AABBmax.y || rayPos.z > AABBmax.z) break;
-      if (rayPos.x < AABBmin.x || rayPos.y < AABBmin.y || rayPos.z < AABBmin.z) break;
-      // if (rayPos.z > depth_world.z) break;
+      if (!isInsideAABB(rayPos)) break;
       rayPos += r.Dir*StepSize;
     }
   }
