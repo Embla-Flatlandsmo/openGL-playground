@@ -47,12 +47,6 @@ struct Ray {
   // float cosA;
 };
 //=============== COORDINATE UTILITIES ===============//
-bool isInsideAABB(vec3 p)
-{
-  float eps = 1e-4;
-  return (p.x > AABBmin.x-eps) && (p.y > AABBmin.y-eps) && (p.z > AABBmin.z-eps) &&
-         (p.x < AABBmax.x+eps) && (p.y < AABBmax.y+eps) && (p.z < AABBmax.z+eps);
-}
 
 bool IntersectBox (Ray r, vec3 boxmin, vec3 boxmax, out float tnear, out float tfar)
 {
@@ -68,16 +62,6 @@ bool IntersectBox (Ray r, vec3 boxmin, vec3 boxmax, out float tnear, out float t
   tfar  = min(min(tmax.x, tmax.y), tmax.z);
 
   return tfar > tnear;
-}
-
-float intersectObstacle(Ray r, vec3 obstacle_world_pos)
-{
-  vec3 invR = vec3(1.0)/r.dir;
-
-  vec3 tObstacle = invR*(obstacle_world_pos-r.origin);
-
-  return tObstacle.z;
-  // return min(min(tObstacle.x, tObstacle.y), tObstacle.z);
 }
 
 bool RayAABBIntersection (Ray r, vec3 bbmin, vec3 bbmax, 
@@ -118,23 +102,6 @@ vec3 fragToClipSpace(uvec2 fragCoord)
 vec2 fragCoordToUV(uvec2 fragCoord)
 {
   return vec2(fragCoord)/(viewport.zw);
-}
-
-// From https://www.khronos.org/opengl/wiki/Compute_eye_space_from_window_space
-// The windowSpace vector is the first two components of gl_FragCoord, 
-// with the third coordinate being the depth read from the depth buffer. 
-vec4 CalcEyeFromWindow(in vec3 windowSpace)
-{
-	vec3 ndcPos;
-	ndcPos.xy = ((2.0 * windowSpace.xy) - (2.0 * viewport.xy)) / (viewport.zw) - 1;
-	ndcPos.z = (2.0 * windowSpace.z - near - far) /
-    (far - near);
-
-	vec4 clipPos;
-	clipPos.w = proj[3][2] / (ndcPos.z - (proj[2][2] / proj[2][3]));
-	clipPos.xyz = ndcPos * clipPos.w;
-
-	return inv_proj * clipPos;
 }
 
 // https://mynameismjp.wordpress.com/2009/03/10/reconstructing-position-from-depth/
@@ -282,77 +249,23 @@ float sampleCloudDensity(vec3 rayPos, int lod)
   // return final_cloud;
 }
 
-uniform float density_factor = 0.02;
-// vec4 raymarchCloud(vec3 startPos, vec3 endPos)
-// {
-//   vec3 path = endPos-startPos;
-//   float len = length(path);
-
-//   const int nSteps = 64;
-
-//   float ds = len/nSteps;
-//   vec3 dir = path/len;
-//   vec4 col = vec4(1.0);
-//   vec3 path_segment = dir*ds;
-
-//   vec3 pos = startPos;
-// 	// uvec2 fragCoord = gl_GlobalInvocationID.xy;
-// 	// int a = int(fragCoord.x) % 4;
-// 	// int b = int(fragCoord.y) % 4;
-// 	// startPos += dir * bayerFilter[a * 4 + b];
-//   float density = 0.0;
-
-//   float lightDotEye = dot(normalize(SUN_DIR), normalize(dir));
-
-//   float T = 1.0;
-//   float sigma_ds = -ds*densityFactor;
-
-//   for (int i = 0; i < nSteps; i++)
-//   {
-//     float density_sample = sampleCloudDensity(pos, i/16);
-//     if (density_sample > 0.0)
-//     {
-//       float height = getHeightFractionForPoint(pos);
-//       vec3 ambientLight = CLOUDS_AMBIENT_COLOR_BOTTOM;
-//       // float light_density = raymarchToLight(pos, ds*0.1, SUN_DIR, sensity_sample, lightDotEye);
-      
-//       float dTrans = exp(density_sample*sigma_ds);
-//       T *= dTrans;
-//     }
-//     if (T <= CLOUDS_MIN_TRANSMITTANCE) break;
-//     pos  += path_segment;
-//   }
-
-//   col.a = 1.0-T;
-//   return col;
-// }
-
-vec4 raymarchCloud(Ray r, float tnear, float tfar, float obstacle_clip_pos)
+uniform float density_factor = 0.2;
+vec4 raymarchCloud(Ray ray_world, Ray ray_viewspace, float tnear, float tfar, vec3 view_space_obstacle)
 {
-
-  // vec4 obstacle_clip_pos = texture(depth, ray_origin_ndc.xy);
-
-  // vec4 obstacle_world_pos = inv_vp*vec4(obstacle_clip_pos.xy, (obstacle_clip_pos-0.1)/350.0, 1.0);
-  // vec4 obstacle_world_pos = vec4(1.0);
-  // // vec4 depth_world = inv_vp*vec4(ray_origin_ndc.xy, obstacle_clip_pos.z/255.0, 1.0);
-  // vec4 obstacle_world_pos = inv_view*obstacle_clip_pos;
-  // obstacle_world_pos.z = obstacle_clip_pos.z;
-  // obstable_world_pos = inv_proj*obstacle_world_pos;
-  // obstacle_world_pos = obstacle_world_pos/obstacle_world_pos.w;
-
-  vec4 dst = vec4(vec3(1.0), 0.0);
-  vec3 rayPos = r.origin + r.dir*tnear;
+  vec4 dst = vec4(vec3(1.0),0.0);
+  float t = tnear;
+  vec3 rayPos = ray_world.origin + ray_world.dir*tnear;
   for (int i = 0; i < STEPS_PRIMARY; i++)
   {
-
     float density_sample = sampleCloudDensity(rayPos, 0);
 
     // Front-to-back compositing
-    dst.a += (1.0-dst.a)*density_sample*0.2;
-
-    if (!isInsideAABB(rayPos)) break;
-    // if (obstacle_clip_pos > (vp*vec4(rayPos, 1.0)).z) break;
-    rayPos += r.dir*StepSize;
+    dst.a += (1.0-dst.a)*density_sample*density_factor;
+    vec3 ray_viewspace_position = ray_viewspace.origin + ray_viewspace.dir*t;
+    if (t > tfar) break;
+    if (ray_viewspace_position.z < view_space_obstacle.z) break; // TODO: Figure out how to integrate until exact t value
+    t += StepSize;
+    rayPos = ray_world.origin + ray_world.dir*t;
   }
   return dst;
 }
@@ -364,13 +277,10 @@ void main()
   ivec2 size = imageSize(OutputFrag);
   if (fragCoord.x > viewport.z || fragCoord.y > viewport.w) return;
 
-  Ray r;
-  vec4 ray_origin_eye = CalcEyeFromWindow(vec3(fragCoord, 0.0));
-  vec4 ray_hit_far = CalcEyeFromWindow(vec3(fragCoord, 1.0));
-  // vec4 ray_dir_eye = normalize(ray_hit_far-ray_origin_eye);
-
-  // vec4 ray_dir_world = inv_view*(ray_dir_eye;
-  // ray_dir_world /= ray_dir_world.w;
+  Ray ray_viewspace;
+  // Create ray origin and direction
+  // Transfer from screen space -> clip space -> world space 
+  // The ray is at clipspace coords x,y and shoots a ray into the scene, (i.e. z=1)
   vec4 ray_dir_ndc = vec4(fragToClipSpace(fragCoord).xy, 1.0 , 1.0);
   vec4 ray_dir_view = inv_proj*ray_dir_ndc;
 
@@ -378,49 +288,29 @@ void main()
   ray_dir_view = vec4(ray_dir_view.xy, -1.0, 0.0);
   vec4 ray_dir_world = (inv_view*ray_dir_view);
 
-  vec4 ray_origin_world = inv_view*(ray_origin_eye/ray_origin_eye.w);
+  // The same for ray origin, only that this time the coordinate starts at the near plane, i.e. z=-1
+  vec4 ray_origin_ndc = vec4(fragToClipSpace(fragCoord), 1.0);
+  vec4 ray_origin_view = inv_proj*ray_origin_ndc;
+  ray_origin_view /= ray_origin_view.w; 
+  vec4 ray_origin_world = inv_view*ray_origin_view;
 
-  r.origin = ray_origin_world.xyz;
-  r.dir = normalize(ray_dir_world.xyz);
- 
-  vec3 ray_dir_eye = normalize(ray_dir_view.xyz);
 
+  Ray ray_world;
+  ray_world.origin = ray_origin_world.xyz;
+  ray_world.dir = normalize(ray_dir_world.xyz);
+
+  ray_viewspace.origin = ray_origin_view.xyz;
+  ray_viewspace.dir = normalize(ray_dir_view.xyz);
   float tnear, tfar;
-  bool hit = RayAABBIntersection(r, AABBmin, AABBmax, tnear, tfar);
+  bool hit = RayAABBIntersection(ray_world, AABBmin, AABBmax, tnear, tfar);
 
-
-  float rasterized_depth = texture(depth, fragCoordToUV(fragCoord)).r;
-
-  vec4 rasterized_depth_eye = CalcEyeFromWindow(vec3(fragCoord, rasterized_depth));
-
-  // rasterized_depth_eye /= rasterized_depth_eye.w;
-  vec4 rasterized_depth_world = inv_view*rasterized_depth_eye;
-
+  // Boid position (if there is one) in view space:
   vec3 view_space_obstacle = VSPositionFromDepth(fragCoordToUV(fragCoord));
 
-
   vec4 dst = vec4(vec3(1.0),0.0);
-
-
-
-
   if (hit)
   {
-    float t = tnear;
-    vec3 rayPos = r.origin + r.dir*tnear;
-    for (int i = 0; i < STEPS_PRIMARY; i++)
-    {
-
-      float density_sample = sampleCloudDensity(rayPos, 0);
-
-      // Front-to-back compositing
-      dst.a += (1.0-dst.a)*density_sample*0.2;
-      vec3 ray_eye = ray_origin_eye.xyz + ray_dir_eye*t;
-      if (!isInsideAABB(rayPos)) break;
-      if (ray_eye.z < view_space_obstacle.z) break; // TODO: Figure out how to integrate until exact t value
-      t += StepSize;
-      rayPos = r.origin + r.dir*t;
-    }
+    dst = raymarchCloud(ray_world, ray_viewspace, tnear, tfar, view_space_obstacle);
   }
   imageStore(OutputFrag, fragCoord, dst);
 }
