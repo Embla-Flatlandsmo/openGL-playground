@@ -145,7 +145,7 @@ vec4 CalcEyeFromWindow(in vec3 windowSpace)
 vec3 VSPositionFromDepth(vec2 vTexCoord)
 {
     // Get the depth value for this pixel
-    float z = texture(depth, vTexCoord).r;  
+    float z = tex2D(depth, vTexCoord);  
     // Get x/w and y/w from the viewport position
     float x = vTexCoord.x * 2 - 1;
     // float y = (1 - vTexCoord.y) * 2 - 1;
@@ -383,8 +383,6 @@ void main()
   r.origin = ray_origin_world.xyz;
   r.dir = normalize(ray_dir_world.xyz);
  
-  vec3 ray_dir_eye = normalize(ray_dir_view.xyz);
-
   float tnear, tfar;
   bool hit = RayAABBIntersection(r, AABBmin, AABBmax, tnear, tfar);
 
@@ -395,8 +393,7 @@ void main()
 
   // rasterized_depth_eye /= rasterized_depth_eye.w;
   vec4 rasterized_depth_world = inv_view*rasterized_depth_eye;
-
-  vec3 view_space_obstacle = VSPositionFromDepth(fragCoordToUV(fragCoord));
+  
 
 
   vec4 dst = vec4(vec3(1.0),0.0);
@@ -415,9 +412,9 @@ void main()
 
       // Front-to-back compositing
       dst.a += (1.0-dst.a)*density_sample*0.2;
-      vec3 ray_eye = ray_origin_eye.xyz + ray_dir_eye*t;
       if (!isInsideAABB(rayPos)) break;
-      if (ray_eye.z < view_space_obstacle.z) break; // TODO: Figure out how to integrate until exact t value
+      if (t > tfar) break;
+      // if (ray_pos_eye.z < rasterized_depth_eye.z) break;
       t += StepSize;
       rayPos = r.origin + r.dir*t;
     }

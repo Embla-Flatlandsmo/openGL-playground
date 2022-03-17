@@ -22,7 +22,7 @@ class CloudBox
         void generateWeatherMap();
         GLuint vao = -1;
 
-        ScreenQuad screen;
+        ScreenQuad screen = ScreenQuad(false);
 
         glm::vec3 boxLow;
         glm::vec3 boxHigh;

@@ -151,7 +151,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     rootNode->children.push_back(boxNode);
     boxNode->vertexArrayObjectID = boxVAO;
     boxNode->VAOIndexCount = box.indices.size();
-    cloud = new CloudBox(glm::vec3(-150.,-20.,-150.), glm::vec3(150., 40., 150.)); // Why is it multiplied by 10?
+    cloud = new CloudBox(glm::vec3(-150.,-20.,-150.), glm::vec3(150., 50., 150.)); // Why is it multiplied by 10?
     particles = new ParticleSystem(glm::vec3(10.,10.,10.), glm::vec3(40., 40., 40.));
 
     getTimeDeltaSeconds();

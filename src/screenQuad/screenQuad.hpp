@@ -17,7 +17,8 @@ enum ScreenEffect
 class ScreenQuad 
 {
     public:
-        ScreenQuad(void);
+        ScreenQuad(bool has_depth_texture);
+        ScreenQuad(void); //TODO: this is messy
         ~ScreenQuad(void);
         void draw(void);
         void bindFramebuffer(void);
@@ -30,6 +31,7 @@ class ScreenQuad
     private:
         GLuint vao;
         GLuint fb;
+        bool has_depth_texture = false;
 
         Gloom::Shader *screen_shader;
 

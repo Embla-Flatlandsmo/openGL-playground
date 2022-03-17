@@ -62,7 +62,7 @@ void CloudBox::render(Gloom::Camera *camera)
     glm::mat4 projection = glm::perspective(glm::radians(80.0f), float(windowWidth) / float(windowHeight), 0.1f, 350.f);
     glm::mat4 VP = projection * camera->getViewMatrix();
     glm::mat4 inverse_mvp = glm::inverse(VP);
-    glm::vec3 camera_position = glm::vec3(camera->getViewMatrix()[3]);
+    // glm::vec3 camera_position = glm::vec3(camera->getViewMatrix()[3]);
     
     rayMarchCloud->activate();
     glUniform3fv(rayMarchCloud->getUniformFromName("AABBmin"), 1, glm::value_ptr(boxLow));
@@ -75,6 +75,8 @@ void CloudBox::render(Gloom::Camera *camera)
     glUniformMatrix4fv(rayMarchCloud->getUniformFromName("inv_vp"), 1, false, glm::value_ptr(inverse_mvp));
     glUniformMatrix4fv(rayMarchCloud->getUniformFromName("inv_view"), 1, false, glm::value_ptr(glm::inverse(camera->getViewMatrix())));
     glUniformMatrix4fv(rayMarchCloud->getUniformFromName("inv_proj"), 1, false, glm::value_ptr(glm::inverse(projection)));
+    glUniformMatrix4fv(rayMarchCloud->getUniformFromName("proj"), 1, false, glm::value_ptr(projection));
+    glUniformMatrix4fv(rayMarchCloud->getUniformFromName("view"), 1, false, glm::value_ptr(camera->getViewMatrix()));
     glUniform4fv(rayMarchCloud->getUniformFromName("viewport"), 1, glm::value_ptr(glm::vec4(0.0,0.0, windowWidth, windowHeight)));
 
     glUniform3fv(rayMarchCloud->getUniformFromName("light_direction"), 1, glm::value_ptr(glm::normalize(glm::vec3(0.5, -1.0, 0.5))));
@@ -98,7 +100,7 @@ void CloudBox::render(Gloom::Camera *camera)
     //     /*unit=*/0,
     //     /*texture=*/screen->texture,
     //     /*level=*/)
-    glBindImageTexture(0, screen.color_texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);
+    glBindImageTexture(0, screen.color_texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
     glDispatchCompute(INT_CEIL(windowWidth,8), INT_CEIL(windowHeight,8), 1);
     glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
     // glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
@@ -171,6 +173,7 @@ void CloudBox::generateWeatherMap() {
 	// weather->setFloat("perlinFrequency", 2.0);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, this->weatherTex);
+    // glBindImageTexture(0, weatherTex, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
     // glUniform1i(rayMarchCloud->getUniformFromName("weather"), 1);
 	glDispatchCompute(INT_CEIL(1024, 8), INT_CEIL(1024, 8), 1);
 
