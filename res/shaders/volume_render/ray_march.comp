@@ -10,6 +10,8 @@ uniform vec3 AABBmin;
 uniform vec3 AABBmax;
 
 uniform float StepSize;
+uniform float time;
+
 
 uniform mat4 inv_vp;
 uniform mat4 inv_view;
@@ -18,6 +20,7 @@ uniform mat4 proj;
 uniform mat4 vp;
 uniform vec4 viewport;
 
+uniform vec3 lightColor = vec3(1.0);
 uniform vec3 light_direction;
 uniform float near = 0.1;
 uniform float far = 350.0;
@@ -87,7 +90,8 @@ vec3 uvwFromWorldPos(vec3 pos)
   vec3 centered_pos = pos-AABBmin;
 
   // Divide by bbsize to get coordinates on [0,1]
-  return clamp(centered_pos/bbsize, vec3(0.0), vec3(1.0));
+  return mod(centered_pos/bbsize, vec3(1.0));
+  // return clamp(centered_pos/bbsize, vec3(0.0), vec3(1.0));
 }
 
 
@@ -144,6 +148,10 @@ vec2 ndcToScreenPos(vec2 ndc)
 uniform vec3 cloudColorTop = (vec3(169., 149., 149.)*(1.5/255.));
 uniform vec3 cloudColorBottom =  (vec3(65., 70., 80.)*(1.5/255.));
 uniform float coverage_multiplier = 0.4;
+uniform float density_factor = 0.2;
+
+uniform float cloud_speed = 100.8;
+
 
 #define CLOUDS_AMBIENT_COLOR_TOP cloudColorTop
 #define CLOUDS_AMBIENT_COLOR_BOTTOM cloudColorBottom
@@ -192,11 +200,15 @@ float getDensityForCloud(float heightFraction, float cloudType)
 
 */
 
+#define CLOUD_TOP_OFFSET 20.0
+const vec3 windDirection = normalize(vec3(0.5, 0.0, 0.1));
 float sampleCloudDensity(vec3 rayPos, int lod)
 {
   vec3 uvw = uvwFromWorldPos(rayPos);
   float height_fraction = getHeightFractionForPoint(rayPos); 
-
+	// vec3 animation = height_fraction * windDirection * CLOUD_TOP_OFFSET + windDirection * time * cloud_speed;
+  vec3 animation = height_fraction*windDirection*CLOUD_TOP_OFFSET + windDirection*time*cloud_speed;
+  vec3 moving_uvw = uvwFromWorldPos(rayPos+animation);
   // Original sample had low frequency noise as a 32x32x32 texture
   // int level_of_detail = int(texture_size.x/32);
   // int lod = 128/32;
@@ -212,7 +224,7 @@ float sampleCloudDensity(vec3 rayPos, int lod)
   float base_cloud = remap(low_frequency_noises.r, -(1.0-low_freq_fbm), 1.0, 0.0, 1.0);
 
   // Remember! Cloud coverage is stored in weather's red channel:
-  vec4 weather_data = textureLod(weather, uvw.xz, 4); // We use uvw.xz because we want weather to be applied in horizontal xz plane
+  vec4 weather_data = textureLod(weather, moving_uvw.xz, 4); // We use uvw.xz because we want weather to be applied in horizontal xz plane
 
   // float density = 
 	float density_height_gradient = getDensityForCloud(height_fraction, 0.5);
@@ -249,15 +261,15 @@ float sampleCloudDensity(vec3 rayPos, int lod)
   // return final_cloud;
 }
 
-uniform float density_factor = 0.2;
 vec4 raymarchCloud(Ray ray_world, Ray ray_viewspace, float tnear, float tfar, vec3 view_space_obstacle)
 {
+ 
   vec4 dst = vec4(vec3(1.0),0.0);
   float t = tnear;
   vec3 rayPos = ray_world.origin + ray_world.dir*tnear;
   for (int i = 0; i < STEPS_PRIMARY; i++)
   {
-    float density_sample = sampleCloudDensity(rayPos, 0);
+    float density_sample = sampleCloudDensity(rayPos, i/40);
 
     // Front-to-back compositing
     dst.a += (1.0-dst.a)*density_sample*density_factor;

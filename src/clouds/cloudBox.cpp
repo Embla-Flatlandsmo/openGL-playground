@@ -68,9 +68,8 @@ void CloudBox::render(Gloom::Camera *camera)
     glUniform3fv(rayMarchCloud->getUniformFromName("AABBmin"), 1, glm::value_ptr(boxLow));
     glUniform3fv(rayMarchCloud->getUniformFromName("AABBmax"), 1, glm::value_ptr(boxHigh));
     glUniform3fv(rayMarchCloud->getUniformFromName("VolumeGridSize"), 1, glm::value_ptr(glm::vec3(128,128,128))); // Input to generateTexture3D in init
-    glUniform1f(rayMarchCloud->getUniformFromName("StepSize"), step_size);
-    glUniform1f(rayMarchCloud->getUniformFromName("coverage_multiplier"), coverage_multiplier);
-    glUniform1f(rayMarchCloud->getUniformFromName("iTime"), (float)glfwGetTime());
+
+    glUniform1f(rayMarchCloud->getUniformFromName("time"), glfwGetTime());
     glUniformMatrix4fv(rayMarchCloud->getUniformFromName("vp"), 1, false, glm::value_ptr(VP));
     glUniformMatrix4fv(rayMarchCloud->getUniformFromName("inv_vp"), 1, false, glm::value_ptr(inverse_mvp));
     glUniformMatrix4fv(rayMarchCloud->getUniformFromName("inv_view"), 1, false, glm::value_ptr(glm::inverse(camera->getViewMatrix())));
@@ -79,6 +78,16 @@ void CloudBox::render(Gloom::Camera *camera)
     glUniformMatrix4fv(rayMarchCloud->getUniformFromName("view"), 1, false, glm::value_ptr(camera->getViewMatrix()));
     glUniform4fv(rayMarchCloud->getUniformFromName("viewport"), 1, glm::value_ptr(glm::vec4(0.0,0.0, windowWidth, windowHeight)));
 
+
+        // float step_size = 0.5f;
+        // float coverage_multiplier = 0.4f;
+        // float texture_scale = 1.0f;
+        // float cloud_speed = 10.0f;
+        // float density_factor = 0.2f;
+    glUniform1f(rayMarchCloud->getUniformFromName("StepSize"), step_size);
+    glUniform1f(rayMarchCloud->getUniformFromName("coverage_multiplier"), coverage_multiplier);
+    glUniform1f(rayMarchCloud->getUniformFromName("cloud_speed"), cloud_speed);
+    glUniform1f(rayMarchCloud->getUniformFromName("density_factor"), density_factor);
     glUniform3fv(rayMarchCloud->getUniformFromName("light_direction"), 1, glm::value_ptr(glm::normalize(glm::vec3(0.5, -1.0, 0.5))));
     // Set sampler 0
     glActiveTexture(GL_TEXTURE0);
@@ -186,7 +195,13 @@ void CloudBox::renderUI()
     ImGui::Begin("Clouds properties");
     ImGui::SliderFloat("Step size", &step_size, 0.5f, 3.f);
     ImGui::SliderFloat("Coverage", &coverage_multiplier, 0.0f, 1.0f);
-    // ImGui::SliderFloat("Size", &(particles->boidProperties.size), 0.1f, 2.0f);
+
+        //     float texture_scale = 1.0f;
+        // float cloud_speed = 10.0f;
+        // float density_factor = 0.2f;
+    ImGui::SliderFloat("Cloud speed", &cloud_speed, 0.0f, 50.0f);
+    ImGui::SliderFloat("Density Factor", &density_factor, 0.01f, 1.0f);
+    ImGui::SliderFloat("Texture Scale", &texture_scale, 0.05f, 10.0f);
     // ImGui::SliderFloat("Cohesion", &(particles->boidProperties.cohesion_factor), 0.0f, 1.5f);
     // ImGui::SliderFloat("Alignment", &(particles->boidProperties.alignment_factor), 0.0f, 1.5f);
     // ImGui::SliderFloat("Separation", &(particles->boidProperties.separation_factor), 0.0f, 1.5f);
