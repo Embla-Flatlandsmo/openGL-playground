@@ -16,7 +16,7 @@ namespace Gloom
     {
     public:
         Camera(glm::vec3 position         = glm::vec3(0.0f, 0.0f, 2.0f),
-               GLfloat   movementSpeed    = 5.0f,
+               GLfloat   movementSpeed    = 15.0f,
                GLfloat   mouseSensitivity = 0.005f)
         {
             cPosition         = position;
@@ -123,13 +123,13 @@ namespace Gloom
             if (keysInUse[GLFW_KEY_Q])  // vertical down
                 fMovement -= dirY;
             if (keysInUse[GLFW_KEY_UP])
-                fPitch -= 1.0;
+                fPitch -= 2.0;
             if (keysInUse[GLFW_KEY_DOWN])
-                fPitch += 1.0;
+                fPitch += 2.0;
             if (keysInUse[GLFW_KEY_RIGHT])
-                fYaw += 1.0;
+                fYaw += 2.0;
             if (keysInUse[GLFW_KEY_LEFT])
-                fYaw -= 1.0;
+                fYaw -= 2.0;
             if (keysInUse[GLFW_KEY_N]) // Neutral rotation
                 cQuaternion = glm::quat(glm::vec3(0, 0, 0));
 
@@ -192,7 +192,7 @@ namespace Gloom
         // Variables used for bookkeeping
         GLboolean resetMouse     = true;
         GLboolean isMousePressed = false;
-        GLboolean keysInUse[512];
+        GLboolean keysInUse[512] = { 0 };
 
         // Last cursor position
         GLfloat lastXPos = 0.0f;

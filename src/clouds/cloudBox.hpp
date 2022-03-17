@@ -16,6 +16,7 @@ class CloudBox
         void render(Gloom::Camera *camera);
         void renderUI(void);
         void setDepthBuffer(GLuint textureID);
+        void updateSun(glm::vec3 direction);
     private:
         void generateTextures();
         void generateWeatherMap();
@@ -38,5 +39,6 @@ class CloudBox
         GLuint weatherTex = 0;
 
         float step_size = 0.5f;
+        float coverage_multiplier = 0.4f;
         float texture_scale = 1.0f;
 };
