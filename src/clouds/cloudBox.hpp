@@ -41,6 +41,7 @@ class CloudBox
         float step_size = 0.5f;
         float coverage_multiplier = 0.4f;
         float texture_scale = 1.0f;
+        float weather_texture_scale = 1.0f;
         float cloud_speed = 10.0f;
         float density_factor = 0.2f;
 };

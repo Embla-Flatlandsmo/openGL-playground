@@ -88,6 +88,8 @@ void CloudBox::render(Gloom::Camera *camera)
     glUniform1f(rayMarchCloud->getUniformFromName("coverage_multiplier"), coverage_multiplier);
     glUniform1f(rayMarchCloud->getUniformFromName("cloud_speed"), cloud_speed);
     glUniform1f(rayMarchCloud->getUniformFromName("density_factor"), density_factor);
+    glUniform1f(rayMarchCloud->getUniformFromName("texture_scale"), texture_scale);
+    glUniform1f(rayMarchCloud->getUniformFromName("weather_texture_scale"), weather_texture_scale);
     glUniform3fv(rayMarchCloud->getUniformFromName("light_direction"), 1, glm::value_ptr(glm::normalize(glm::vec3(0.5, -1.0, 0.5))));
     // Set sampler 0
     glActiveTexture(GL_TEXTURE0);
@@ -202,6 +204,7 @@ void CloudBox::renderUI()
     ImGui::SliderFloat("Cloud speed", &cloud_speed, 0.0f, 50.0f);
     ImGui::SliderFloat("Density Factor", &density_factor, 0.01f, 1.0f);
     ImGui::SliderFloat("Texture Scale", &texture_scale, 0.05f, 10.0f);
+    ImGui::SliderFloat("Weather Texture Scale", &weather_texture_scale, 0.05f, 10.0f);
     // ImGui::SliderFloat("Cohesion", &(particles->boidProperties.cohesion_factor), 0.0f, 1.5f);
     // ImGui::SliderFloat("Alignment", &(particles->boidProperties.alignment_factor), 0.0f, 1.5f);
     // ImGui::SliderFloat("Separation", &(particles->boidProperties.separation_factor), 0.0f, 1.5f);
