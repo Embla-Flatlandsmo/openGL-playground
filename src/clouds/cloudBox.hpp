@@ -39,9 +39,9 @@ class CloudBox
         GLuint weatherTex = 0;
 
         float step_size = 0.5f;
-        float coverage_multiplier = 0.4f;
-        float texture_scale = 1.0f;
-        float weather_texture_scale = 1.0f;
+        float coverage_multiplier = 1.0f;
+        float texture_scale = 2.0f;
+        float weather_texture_scale = 0.03f;
         float cloud_speed = 10.0f;
-        float density_factor = 0.2f;
+        float density_factor = 1.0f;
 };
