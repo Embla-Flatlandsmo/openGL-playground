@@ -44,4 +44,5 @@ class CloudBox
         float weather_texture_scale = 0.03f;
         float cloud_speed = 10.0f;
         float density_factor = 1.0f;
+        float sun_power = 200.0f;
 };

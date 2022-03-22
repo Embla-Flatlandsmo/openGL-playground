@@ -21,7 +21,7 @@ uniform mat4 vp;
 uniform vec4 viewport;
 
 uniform vec3 lightColor = vec3(1.0);
-uniform vec3 light_direction = vec3(0.0, -1.0, 0.0);
+uniform vec3 light_direction = vec3(0.0, 1.0, 0.0);
 uniform float near = 0.1;
 uniform float far = 350.0;
 
@@ -137,51 +137,13 @@ vec2 ndcToScreenPos(vec2 ndc)
 }
 
 //=============== LIGHT UTILITIES ===============//
-//Scattering and absorption coefficients
-const vec3 sigmaS = vec3(1);
-const vec3 sigmaA = vec3(0.0);
-//Extinction coefficient.
-const vec3 sigmaE = max(sigmaS + sigmaA, vec3(1e-6));
-const float power = 200.0;  
 
-/* // Henyey-Greenstein Phase function (GPU Pro 7 Ch 4.4.3)
+// Henyey-Greenstein Phase function (GPU Pro 7 Ch 4.4.3)
 // g = eccentricity, normally 0.2
 float HenyeyGreenstein(vec3 lightVector, vec3 viewVector, float g)
 {
   float cos_angle = dot(normalize(lightVector), normalize(viewVector));
   return ((1.0 - g*g) /pow((1.0+g*g-2.0*g*cos_angle), 3.0/2.0)) / 4.0*3.1415;
-} */
-
-float HenyeyGreenstein(float g, float costh){
-	return (1.0/(4.0 * 3.1415))  * ((1.0 - g * g) / pow(1.0 + g*g - 2.0*g*costh, 1.5));
-}
-
-//https://twitter.com/FewesW/status/1364629939568451587/photo/1
-vec3 multipleOctaves(float extinction, float mu, float stepL){
-
-    vec3 luminance = vec3(0);
-    const float octaves = 4.0;
-    
-    //Attenuation
-    float a = 1.0;
-    //Contribution
-    float b = 1.0;
-    //Phase attenuation
-    float c = 1.0;
-    
-    float phase;
-    
-    for(float i = 0.0; i < octaves; i++){
-        //Two-lobed HG
-        phase = mix(HenyeyGreenstein(-0.1*c, mu), HenyeyGreenstein(0.3*c, mu), 0.7);
-        luminance += b * phase * exp(-stepL * extinction * sigmaE * a);
-        //Lower is brighter
-        a *= 0.2;
-        //Higher is brighter
-        b *= 0.5;
-        c *= 0.5;
-    }
-    return luminance;
 }
 
 uniform float absorption = 0.0035;
@@ -322,82 +284,58 @@ float sampleCloudDensity(vec3 rayPos, int lod)
   return final_cloud;
 }
 
-vec3 raymarchToLight(vec3 o, float stepSize, vec3 lightDir, float mu)
+
+float raymarchToLight(vec3 o, float stepSize, vec3 lightDir, float originalDensity, float lightDotEye)
 {
-  float cloud_height = getHeightFractionForPoint(o);
-  float light_ray_density = 0.0;
-  vec3 light_ray_pos = o;
-  for (int i = 0; i < 6; i++)
-  {
-    int sample_lod = 0;
-    if (light_ray_density > 0.3)
-    {
-      sample_lod = 3;
-    }
 
-    light_ray_density += sampleCloudDensity(light_ray_pos, sample_lod);
-    light_ray_pos += normalize(lightDir)*stepSize;
-  }
+	vec3 startPos = o;
+	float ds = stepSize * 6.0;
+	vec3 rayStep = lightDir * ds;
+	const float CONE_STEP = 1.0/6.0;
+	float coneRadius = 1.0; 
+	float density = 0.0;
+	float coneDensity = 0.0;
+	float invDepth = 1.0/ds;
+	float sigma_ds = -ds*absorption;
+	vec3 pos;
 
-  vec3 beers_law = multipleOctaves(light_ray_density, mu, stepSize);
-    //Return product of Beer's law and powder effect depending on the 
-    //view direction angle with the light direction.
-	return mix(beers_law * 2.0 * (1.0-(exp(-stepSize*light_ray_density*2.0*sigmaE))), beers_law, 0.5+0.5*mu);
-}
+	float T = 1.0;
 
-// float raymarchToLight(vec3 o, float stepSize, vec3 lightDir, float originalDensity, float lightDotEye)
-// {
+	for(int i = 0; i < 6; i++)
+	{
+    pos = startPos + coneRadius;
+		// pos = startPos + coneRadius*noiseKernel[i]*float(i);
 
-// 	vec3 startPos = o;
-// 	float ds = stepSize * 6.0;
-// 	vec3 rayStep = lightDir * ds;
-// 	const float CONE_STEP = 1.0/6.0;
-// 	float coneRadius = 1.0; 
-// 	float density = 0.0;
-// 	float coneDensity = 0.0;
-// 	float invDepth = 1.0/ds;
-// 	float sigma_ds = -ds*absorption;
-// 	vec3 pos;
-
-// 	float T = 1.0;
-
-// 	for(int i = 0; i < 6; i++)
-// 	{
-//     pos = startPos + coneRadius;
-// 		// pos = startPos + coneRadius*noiseKernel[i]*float(i);
-
-// 		float heightFraction = getHeightFractionForPoint(pos);
-// 		if(heightFraction >= 0)
-// 		{
+		float heightFraction = getHeightFractionForPoint(pos);
+		if(heightFraction >= 0)
+		{
 			
-// 			float cloudDensity = sampleCloudDensity(pos, 0);
-// 			if(cloudDensity > 0.0)
-// 			{
-// 				float Ti = exp(cloudDensity*sigma_ds);
-// 				T *= Ti;
-// 				density += cloudDensity;
-// 			}
-// 		}
-// 		startPos += rayStep;
-// 		coneRadius += CONE_STEP;
-// 	}
+			float cloudDensity = sampleCloudDensity(pos, 0);
+			if(cloudDensity > 0.0)
+			{
+				float Ti = exp(cloudDensity*sigma_ds);
+				T *= Ti;
+				density += cloudDensity;
+			}
+		}
+		startPos += rayStep;
+		coneRadius += CONE_STEP;
+	}
 
-// 	//return 2.0*T*powder((originalDensity));//*powder(originalDensity, 0.0);
-// 	return T;
-// }
+	// return 2.0*T*powder((originalDensity));//*powder(originalDensity, 0.0);
+	return T;
+}
 
 float HG( float sundotrd, float g) {
 	float gg = g * g;
 	return (1. - gg) / pow( 1. + gg - 2. * g * sundotrd, 1.5);
 }
 
-
 vec4 raymarchCloud(Ray ray_world, Ray ray_viewspace, float tnear, float tfar, vec3 view_space_obstacle)
 {
  
   // vec4 dst = vec4(vec3(1.0),0.0);
-  vec3 color = vec3(0.0);
-  vec3 totalTransmittance = vec3(1.0);
+  vec4 col = vec4(0.0);
   float t = tnear;
   vec3 rayPos = ray_world.origin + ray_world.dir*tnear;
 
@@ -409,111 +347,44 @@ vec4 raymarchCloud(Ray ray_world, Ray ray_viewspace, float tnear, float tfar, ve
   float sigma_ds = -StepSize*density_factor;
   float T = 1.0;
 
-  float mu = 0.5+0.5*dot(normalize(ray_world.dir), normalize(light_direction));
-	float phaseFunction = mix(HenyeyGreenstein(-0.3, mu), HenyeyGreenstein(0.3, mu), 0.7);
-    
-  // vec3 sunLight = sunLightColour * power;
-  vec3 sunLight = vec3(1.0)*power;
 
   for (int i = 0; i < STEPS_PRIMARY; i++)
   {
     float density_sample = sampleCloudDensity(rayPos, i/40);
-    vec3 sampleSigmaS = sigmaS*density_sample;
-    vec3 sampleSigmaE = sigmaE*density_sample;
     if (density_sample > 0.0)
     {
       float height = getHeightFractionForPoint(rayPos);
-      vec3 ambientLight =CLOUDS_AMBIENT_COLOR_BOTTOM;
-      // float light_density = raymarchToLight(rayPos, StepSize*0.1, light_direction, density_sample, light_dot_eye);
-      vec3 luminance = 0.1*ambientLight + 
-          sunLight * phaseFunction * raymarchToLight(rayPos, StepSize*0.1, light_direction, mu);
+      vec3 ambientLight = CLOUDS_AMBIENT_COLOR_BOTTOM;
+      float light_density = raymarchToLight(rayPos, StepSize*0.1, light_direction, density_sample, light_dot_eye);
+      float scattering = mix(HG(light_dot_eye, -0.08), HG(light_dot_eye, 0.08), clamp(light_dot_eye*0.5+0.5, 0.0, 1.0));
+      scattering = max(scattering, 1.0);
+      // float powder_term = powder(density_sample);
+      float powder_term = 1.0;
+      vec3 bg = vec3(0.0,0.74902, 1.0);
+      // vec3 S = mix(ambientLight*1.8, bg, 0.2);
+      // S = 0.6 * density_sample * mix(S, scattering*vec3(0.0, 1.0, 0.0)*vec3(1.1, 1.1, 0.95), powder_term*light_density);
+			vec3 S = 0.6*mix( mix(ambientLight*1.8, bg, 0.2), scattering*SUN_COLOR, powder_term*light_density) * density_sample;
+      float dTrans = exp(density_sample*sigma_ds);
+      vec3 Sint = (S - S*dTrans) * (1.0 / density_sample);
+      col.rgb += T * Sint;
+      T *= dTrans;
       
-      luminance *= sampleSigmaS;
-
-      vec3 transmittance = exp(-sampleSigmaE * StepSize);
-      // float light_density = rayMarchToLight(rayPos, StepSize*0.1, light_direction, mu);
-      color += 
-          totalTransmittance * (luminance - luminance * transmittance) / sampleSigmaE; 
-      totalTransmittance *= transmittance;  
-
-      if(length(totalTransmittance) <= 0.001){
-          totalTransmittance = vec3(0.0);
-          break;
-      }
+      // vec3 S = 0.6*mix(mix(ambientLight*1.8, ))
     }
 
     // Front-to-back compositing
     // dst.a += (1.0-dst.a)*density_sample*density_factor;
     vec3 ray_viewspace_position = ray_viewspace.origin + ray_viewspace.dir*t;
+    if (T < 0.001) break;
     if (t > tfar) break;
     if (ray_viewspace_position.z < view_space_obstacle.z) break; // TODO: Figure out how to integrate until exact t value
     t += StepSize;
     rayPos = ray_world.origin + ray_world.dir*t;
   }
-  vec4 dst = vec4(color, 1.0-length(totalTransmittance));
-  // col.a = 1.0-length(totalTransmittance);
-  return dst;
+  col.a = 1.0-T;
+  return col;
 }
 
-// vec4 raymarchCloud(Ray ray_world, Ray ray_viewspace, float tnear, float tfar, vec3 view_space_obstacle)
-// {
- 
-//   // vec4 dst = vec4(vec3(1.0),0.0);
-//   vec4 col = vec4(0.0);
-//   float t = tnear;
-//   vec3 rayPos = ray_world.origin + ray_world.dir*tnear;
-
-//   float density = 0.0;
-  
-//   float light_dot_eye = dot(normalize(light_direction), normalize(ray_world.dir));
-  
-
-//   float sigma_ds = -StepSize*density_factor;
-//   float T = 1.0;
-
-//   float mu = 0.5+0.5*dot(normalize(ray_world.dir), normalize(light_direction));
-
-//   for (int i = 0; i < STEPS_PRIMARY; i++)
-//   {
-//     float density_sample = sampleCloudDensity(rayPos, i/40);
-//     if (density_sample > 0.0)
-//     {
-//       float height = getHeightFractionForPoint(rayPos);
-//       vec3 ambientLight =CLOUDS_AMBIENT_COLOR_BOTTOM;
-//       // float light_density = raymarchToLight(rayPos, StepSize*0.1, light_direction, density_sample, light_dot_eye);
-//       float light_density = rayMarchToLight(rayPos, StepSize*0.1, light_direction, mu);
-//       float scattering = mix(HG(light_dot_eye, -0.08), HG(light_dot_eye, 0.08), clamp(light_dot_eye*0.5+0.5, 0.0, 1.0));
-//       scattering = max(scattering, 1.0);
-
-//       float powder_term = powder(density_sample);
-//       vec3 bg = vec3(0.0,0.74902, 1.0);
-//       // vec3 S = mix(ambientLight*1.8, bg, 0.2);
-//       // S = 0.6 * density_sample * mix(S, scattering*vec3(0.0, 1.0, 0.0)*vec3(1.1, 1.1, 0.95), powder_term*light_density);
-// 			vec3 S = 0.6*mix( mix(ambientLight*1.8, bg, 0.2), scattering*SUN_COLOR, powder_term*light_density) * density_sample;
-//       float dTrans = exp(density_sample*sigma_ds);
-//       vec3 Sint = (S - S*dTrans) * (1.0 / density_sample);
-//       col.rgb += T * Sint;
-//       T *= dTrans;
-
-//       // vec3 S = 0.6*mix(mix(ambientLight*1.8, ))
-//     }
-
-//     // Front-to-back compositing
-//     // dst.a += (1.0-dst.a)*density_sample*density_factor;
-//     vec3 ray_viewspace_position = ray_viewspace.origin + ray_viewspace.dir*t;
-//     if (T < 0.001) break;
-//     if (t > tfar) break;
-//     if (ray_viewspace_position.z < view_space_obstacle.z) break; // TODO: Figure out how to integrate until exact t value
-//     t += StepSize;
-//     rayPos = ray_world.origin + ray_world.dir*t;
-//   }
-//   col.a = 1.0-T;
-//   return col;
-// }
-
-vec3 ACESFilm(vec3 x){
-    return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
-}
 
 void main()
 {
@@ -556,9 +427,6 @@ void main()
   {
     // dst = vec4(texture(perlinWorley, texture_scale*uvwFromWorldPos(ray_world.origin + ray_world.dir*tnear)).bbb, 1.0);
     dst = raymarchCloud(ray_world, ray_viewspace, tnear, tfar, view_space_obstacle);
-    dst.rgb *= 0.5;
-    dst.rgb *= ACESFilm(dst.rgb);
-    dst.rgb = pow(dst.rgb, vec3(0.4545));
   }
   imageStore(OutputFrag, fragCoord, dst);
 }
