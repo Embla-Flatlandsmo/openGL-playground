@@ -16,6 +16,7 @@ class CloudBox
         void render(Gloom::Camera *camera);
         void renderUI(void);
         void setDepthBuffer(GLuint textureID);
+        void setColorBuffer(GLuint textureID);
         void updateSun(glm::vec3 direction);
     private:
         void generateTextures();
@@ -44,5 +45,6 @@ class CloudBox
         float weather_texture_scale = 0.03f;
         float cloud_speed = 10.0f;
         float density_factor = 1.0f;
-        float sun_power = 200.0f;
+        float sun_power = 10.0f;
+        float fog_factor = 0.0075f;
 };

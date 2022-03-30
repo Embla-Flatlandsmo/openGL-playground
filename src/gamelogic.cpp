@@ -230,6 +230,7 @@ void renderFrame(GLFWwindow* window) {
 
     screen->draw();
     cloud->setDepthBuffer(screen->depth_texture);
+    cloud->setColorBuffer(screen->color_texture);
     cloud->render(camera);
 }
 

@@ -79,7 +79,7 @@ void ScreenQuad::bindFramebuffer(void)
     glBindFramebuffer(GL_FRAMEBUFFER, fb);
 
     // make sure we clear the framebuffer's content
-    // glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    // glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
@@ -213,7 +213,7 @@ void ScreenQuad::initFramebuffer(void)
 
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color_texture, 0);
     // glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, depth_texture, 0);
-    GLuint attachments[1] = { GL_COLOR_ATTACHMENT0};
+    GLuint attachments[1] = {GL_COLOR_ATTACHMENT0};
     glDrawBuffers(1, attachments);
 
     // now that we actually created the framebuffer and added all attachments we want to check if it is actually complete now
