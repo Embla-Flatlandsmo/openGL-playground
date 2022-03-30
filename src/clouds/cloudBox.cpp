@@ -102,6 +102,8 @@ void CloudBox::render(Gloom::Camera *camera)
     glUniform1f(rayMarchCloud->getUniformFromName("sun_power"), sun_power);
     glUniform1f(rayMarchCloud->getUniformFromName("fog_factor"), fog_factor);
     glUniform3fv(rayMarchCloud->getUniformFromName("light_direction"), 1, glm::value_ptr(glm::normalize(glm::vec3(0.5, 1.0, 0.5))));
+    glUniform3fv(rayMarchCloud->getUniformFromName("cloud_shadow_color"), 1, glm::value_ptr(cloud_shadow_color));
+    glUniform3fv(rayMarchCloud->getUniformFromName("cloud_light_color"), 1, glm::value_ptr(cloud_light_color));
     // Set sampler 0
     glActiveTexture(GL_TEXTURE0);
 
@@ -208,24 +210,14 @@ void CloudBox::renderUI()
     ImGui::Begin("Clouds properties");
     ImGui::SliderFloat("Step size", &step_size, 0.5f, 3.f);
     ImGui::SliderFloat("Coverage", &coverage_multiplier, 0.0f, 1.0f);
-
-        //     float texture_scale = 1.0f;
-        // float cloud_speed = 10.0f;
-        // float density_factor = 0.2f;
     ImGui::SliderFloat("Cloud speed", &cloud_speed, 0.0f, 50.0f);
     ImGui::SliderFloat("Density Factor", &density_factor, 0.01f, 1.0f);
     ImGui::SliderFloat("Texture Scale", &texture_scale, 0.05f, 10.0f);
     ImGui::SliderFloat("Weather Texture Scale", &weather_texture_scale, 0.05f, 10.0f);
     ImGui::SliderFloat("Sun power", &sun_power, 0.0f, 200.0f);
     ImGui::SliderFloat("Fog factor", &fog_factor, 0.0f, 0.01f);
-    // ImGui::SliderFloat("Cohesion", &(particles->boidProperties.cohesion_factor), 0.0f, 1.5f);
-    // ImGui::SliderFloat("Alignment", &(particles->boidProperties.alignment_factor), 0.0f, 1.5f);
-    // ImGui::SliderFloat("Separation", &(particles->boidProperties.separation_factor), 0.0f, 1.5f);
-    // ImGui::SliderFloat("Separation Range", &(particles->boidProperties.separation_range), 0.0f, 3.0f); // Max is view range
-    // ImGui::SliderFloat("Boundary avoidance", &(particles->boidProperties.boundary_avoidance_factor), 0.0f, 0.2f);
-    // ImGui::SliderFloat("dt", &(particles->boidProperties.dt), 0.0f, 2.0);
-    // ImGui::SliderFloat("Max velocity", &(particles->boidProperties.max_vel), 0.0f, 4.0f);
-    // ImGui::Checkbox("Wrap around", &(particles->boidProperties.wrap_around));
+    ImGui::SliderFloat3("cloud Light color", (float*)&cloud_light_color, 0.0f, 1.0f);
+    ImGui::SliderFloat3("Cloud Shadow Color", (float*)&cloud_shadow_color, 0.0f, 1.0f);
     ImGui::End();
 }
 

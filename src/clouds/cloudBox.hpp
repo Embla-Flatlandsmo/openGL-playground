@@ -47,4 +47,6 @@ class CloudBox
         float density_factor = 1.0f;
         float sun_power = 10.0f;
         float fog_factor = 0.0075f;
+        glm::vec3 cloud_shadow_color = glm::vec3(0.65,0.65,0.75);
+        glm::vec3 cloud_light_color =  glm::vec3(1.0,0.6,0.3);
 };
