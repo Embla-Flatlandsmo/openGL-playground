@@ -111,8 +111,10 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
         {
             case GLFW_KEY_U:
                 screen->incrementCurrentEffect();
+                break;
             case GLFW_KEY_J:
                 screen->decrementCurrentEffect();
+                break;
         }
     }
 }
