@@ -1,3 +1,4 @@
+#pragma once
 #include "utilities/shader.hpp"
 #include <glad/glad.h>
 
@@ -10,6 +11,12 @@ enum ScreenEffect
     SHARPEN,
 };
 
+enum QuadUsage
+{
+    POST_PROCESSING,
+    SKY,
+};
+
 /**
  * @brief Quad class for post-processing effects.
  * 
@@ -18,6 +25,7 @@ class ScreenQuad
 {
     public:
         ScreenQuad(bool has_depth_texture);
+        ScreenQuad(QuadUsage usage);
         ScreenQuad(void); //TODO: this is messy
         ~ScreenQuad(void);
         void draw(void);
@@ -28,12 +36,12 @@ class ScreenQuad
         void decrementCurrentEffect(void);
         GLuint color_texture;
         GLuint depth_texture;
+        Gloom::Shader *screen_shader;
     private:
         GLuint vao;
         GLuint fb;
         bool has_depth_texture = false;
 
-        Gloom::Shader *screen_shader;
 
         ScreenEffect current_effect = ScreenEffect::NORMAL;
 

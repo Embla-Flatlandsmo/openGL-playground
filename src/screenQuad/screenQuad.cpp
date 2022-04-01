@@ -68,6 +68,31 @@ ScreenQuad::ScreenQuad(bool has_depth_texture = true)
     glBindVertexArray(0);
 }
 
+ScreenQuad::ScreenQuad(QuadUsage usage = POST_PROCESSING)
+{
+    screen_shader = new Gloom::Shader();
+    switch (usage)
+    {
+        case POST_PROCESSING:
+            screen_shader->makeBasicShader("../res/shaders/screen.vert", "../res/shaders/screen.frag");
+            break;
+        case SKY:
+            screen_shader->makeBasicShader("../res/shaders/sky.vert", "../res/shaders/sky.frag");
+            break;
+        default:
+            screen_shader->makeBasicShader("../res/shaders/screen.vert", "../res/shaders/screen.frag");
+            break;
+    }
+
+    screen_shader->activate();
+    this->has_depth_texture = false;
+    Mesh screen_quad = generateScreenQuad();
+    vao = generateBuffer(screen_quad);
+    initFramebuffer();
+    glUseProgram(0);
+    glBindVertexArray(0);
+}
+
 ScreenQuad::~ScreenQuad()
 {
     glDeleteFramebuffers(1, &fb);

@@ -139,7 +139,7 @@ vec3 cohesion(uint gid) {
     }
     if (num_boids_affecting == 0) return flock_center;
     flock_center /= num_boids_affecting;
-    return (flock_center-current_boid.pos)*cohesion_factor;
+    return (flock_center-current_boid.pos)*(cohesion_factor/min(num_boids_affecting, 100));
 }
 
 uint flattenCellID(uint x, uint y, uint z) {

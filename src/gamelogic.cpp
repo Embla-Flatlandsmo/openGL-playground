@@ -31,6 +31,7 @@
 #include "utilities/glfont.h"
 #include "particles/particleSystem.hpp"
 #include "clouds/cloudBox.hpp"
+#include "sky/sky.hpp"
 
 enum KeyFrameAction {
     BOTTOM, TOP
@@ -61,9 +62,9 @@ sf::Sound* sound;
 Gloom::Camera* camera;
 ParticleSystem* particles;
 CloudBox* cloud;
+Sky* sky;
 
 ScreenQuad* screen;
-
 
 // const glm::vec3 boxDimensions(180, 90, 90);
 const glm::vec3 boxDimensions(300, 150, 150);
@@ -137,6 +138,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     screen = new ScreenQuad();
     camera = new Gloom::Camera(glm::vec3(20, 20, 70));
     shader = new Gloom::Shader();
+    sky = new Sky();
     shader->makeBasicShader("../res/shaders/simple.vert", "../res/shaders/simple.frag");
     shader->activate();
 
@@ -222,8 +224,9 @@ void renderFrame(GLFWwindow* window) {
     glViewport(0, 0, windowWidth, windowHeight);
 
     screen->bindFramebuffer();
-
+    sky->render(camera);
     particles->render(window, camera);
+
     // shader->activate();
     // renderNode(rootNode);
 

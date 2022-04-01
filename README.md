@@ -21,15 +21,22 @@ The starter code is lifted from https://github.com/bartvbl/TDT4230-Assignment-1
 - [ ] Make number of cells configurable (fixed to 2048 because of prefix sum shader now)
 - [ ] Wrap-around distance checking
 - [ ] Do the rest of the things necessary to make A MILLION BOIDS!!!!
-- [ ] Come up with a good way to structure the program
+- [ ] Lambertian lighting for boids
+
 ### Clouds
 - [x] Parametric rendering in fragment shader
 - [x] Use CPU camera to do viewing transform in frag shader
 - [x] Ray tracing in compute shader
 - [x] Sample texture in compute shader
 - [x] Multi-texturing (store fragment position in texture)
-- [ ] Implement clouds simulation
-- [ ] Implement depth-checking for ray tracing in compute shader
+- [x] Implement clouds simulation
+- [x] Implement depth-checking for ray tracing in compute shader
+- [x] Fog
+
+### Finishing touches
+- [ ] Some post-processing effects? Glare, tonemapping etc
+- [ ] Come up with a good way to structure the program
+- [ ] dithering for clouds etc
 
 
 ### Less important TODOs:

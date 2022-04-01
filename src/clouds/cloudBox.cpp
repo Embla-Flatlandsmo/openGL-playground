@@ -215,7 +215,7 @@ void CloudBox::renderUI()
     ImGui::SliderFloat("Texture Scale", &texture_scale, 0.05f, 10.0f);
     ImGui::SliderFloat("Weather Texture Scale", &weather_texture_scale, 0.05f, 10.0f);
     ImGui::SliderFloat("Sun power", &sun_power, 0.0f, 200.0f);
-    ImGui::SliderFloat("Fog factor", &fog_factor, 0.0f, 1.f);
+    ImGui::SliderFloat("Fog factor", &fog_factor, 0.0f, 3.f);
     ImGui::SliderFloat3("cloud Light color", (float*)&cloud_light_color, 0.0f, 1.0f);
     ImGui::SliderFloat3("Cloud Shadow Color", (float*)&cloud_shadow_color, 0.0f, 1.0f);
     ImGui::End();

@@ -30,6 +30,7 @@ uniform float cloud_speed = 100.0;
 uniform float fog_factor = 0.0075;
 uniform vec3 cloud_shadow_color = vec3(0.65,0.65,0.75);
 uniform vec3 cloud_light_color = vec3(1.0,0.6,0.3);
+uniform vec3 fog_color = vec3(183, 237, 255)/255.0;
 
 //=============== LIGHT UNIFORMS ===============//
 uniform vec3 light_color = vec3(1.0);
@@ -341,7 +342,6 @@ vec4 raymarchCloud(Ray ray_world, Ray ray_viewspace, float tnear, float tfar, ve
   const int oct = 5;
   const vec3 sundir = normalize( vec3(-1.0,1.0,-1.0) );
   vec4 sum = vec4(0.0);
-  vec3 bgcol = vec3(0.0,0.74902, 1.0);
 
   float dt = (tfar-tnear)/190;
   for (int i = 0; i < 190; i++)
@@ -366,7 +366,7 @@ vec4 raymarchCloud(Ray ray_world, Ray ray_viewspace, float tnear, float tfar, ve
       col.xyz *= lin;
       // col.xyz *= smoothstep(vec3(0.0), lin, sun_power/200.0);
       // fog
-      col.xyz = mix(col.xyz,bgcol, 1.0-exp2(-fog_factor*(t/100.0)));
+      col.xyz = mix(col.xyz,fog_color, 1.0-exp2(-fog_factor*(t/100.0)));
       // composite front to back
       col.a    = min(col.a*8.0*dt,1.0);
       col.rgb *= col.a;

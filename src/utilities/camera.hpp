@@ -7,6 +7,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/transform.hpp>
+#include <utilities/window.hpp>
 #include <GLFW/glfw3.h>
 
 
@@ -32,6 +35,8 @@ namespace Gloom
         /* Getter for the view matrix */
         glm::mat4 getViewMatrix() { return matView; }
 
+        /* Getter for the projection matrix */
+        glm::mat4 getProjMatrix() { return matProj; }
 
         /* Handle keyboard inputs from a callback mechanism */
         void handleKeyboardInputs(int key, int action)
@@ -204,6 +209,9 @@ namespace Gloom
 
         // View matrix
         glm::mat4 matView;
+
+        // Projection matrix
+        glm::mat4 matProj = glm::perspective(glm::radians(80.0f), float(windowWidth) / float(windowHeight), 0.1f, 350.f);
     };
 }
 
