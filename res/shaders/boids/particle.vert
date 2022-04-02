@@ -10,8 +10,10 @@ in layout (location = 3) vec4 pos;
 in layout (location = 4) vec4 vel;
 in layout (location = 5) vec4 acc;
 
-out vec4 vert_color;
-out vec4 frag_pos;
+out layout(location = 0) vec4 vert_color;
+out layout(location = 1) vec4 frag_pos;
+out layout(location = 2) vec3 normal_out;
+out layout(location = 3) vec3 world_space_pos;
 
 /**
  * Create rotation matrix from field vector.
@@ -39,13 +41,19 @@ mat4 getRotationMat(vec3 vector)
 void main() {
 	mat4 rot = getRotationMat(vel.xyz);
 	vec3 rvert = vec3(rot * vec4(vert.xyz, 1.0f));
- 	gl_Position = VP * vec4(particleSize*rvert + pos.xyz, 1.0);
+	frag_pos = VP*vec4(particleSize*rvert + pos.xyz, 1.0);
+	gl_Position = frag_pos;
+	world_space_pos = particleSize*rvert + pos.xyz;
 	// frag_pos = VP * vec4(particleSize*rvert + pos.xyz, 1.0);
 	// vec3 hotColor = vec3(0.5, 1.0, 0.8);
 	// vec3 coldColor = vec3(0.8, 0, 0.4);
 	// float pct= clamp(abs(acc.w), 0, 10)/10;
 	// vec3 colorVal = mix(coldColor, hotColor, pct);
 	//  colorVal = (clamp(colorValue, minColorValue, maxColorValue) - minColorValue) / max(1, (maxColorValue - minColorValue));
-	vert_color = vec4(clamp(normalize(abs(vel.xyz)), vec3(0.2), vec3(1.0)), 1.0);
+	vert_color = rot*vec4(normal_in, 1.0);
+	// vert_color = VP*rot*vec4(normal_in, 1.0);
+	normal_out = normalize((rot*vec4(normal_in, 1.0)).xyz);
+	// vert_color = vec4(clamp(normalize(abs(vel.xyz)), vec3(0.2), vec3(1.0)), 1.0);
+	// normal_out = 
 	// vert_color = vec4(colorVal, 1.0);
 }

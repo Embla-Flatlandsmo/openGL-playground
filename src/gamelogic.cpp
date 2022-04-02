@@ -229,14 +229,14 @@ void renderFrame(GLFWwindow* window) {
 
     // shader->activate();
     // renderNode(rootNode);
-
+    cloud->setDepthBuffer(screen->depth_texture);
+    cloud->setColorBuffer(screen->color_texture);
+    cloud->render(camera);
     screen->unbindFramebuffer();
 
 
     screen->draw();
-    cloud->setDepthBuffer(screen->depth_texture);
-    cloud->setColorBuffer(screen->color_texture);
-    cloud->render(camera);
+
 }
 
 void renderUI(void) {

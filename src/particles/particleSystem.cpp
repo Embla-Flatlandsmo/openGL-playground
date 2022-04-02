@@ -122,7 +122,7 @@ void ParticleSystem::render(GLFWwindow *window, Gloom::Camera *camera)
     glfwGetWindowSize(window, &windowWidth, &windowHeight);
 
     // We set a projection matrix to get some perspective going!
-    glm::mat4 projection = glm::perspective(glm::radians(80.0f), float(windowWidth) / float(windowHeight), 0.1f, 350.f);
+    glm::mat4 projection = camera->getProjMatrix();
     glm::mat4 VP = projection * camera->getViewMatrix();
 
     if (debug)
@@ -132,7 +132,7 @@ void ParticleSystem::render(GLFWwindow *window, Gloom::Camera *camera)
     colorShader->activate();
     glUniform1f(colorShader->getUniformFromName("particleSize"), boidProperties.size);
     glUniformMatrix4fv(colorShader->getUniformFromName("VP"), 1, GL_FALSE, glm::value_ptr(VP));
-
+    glUniform3fv(colorShader->getUniformFromName("camera_pos"), 1, glm::value_ptr(glm::vec3(camera->getViewMatrix()[3])));
     glBindVertexArray(particleVAO);
     // Finally we draw the particles
     // glDrawArrays(GL_POINTS, 0, NUM_PARTICLES);

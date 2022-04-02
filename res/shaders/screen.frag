@@ -86,7 +86,9 @@ void main()
         default:
             color = texture(screenTexture, texCoords);
             break;
-
     }
+
+    // tonemap
+    color = smoothstep(0.15,1.1,color);
 
 }

@@ -34,7 +34,7 @@ uniform vec3 fog_color = vec3(183, 237, 255)/255.0;
 
 //=============== LIGHT UNIFORMS ===============//
 uniform vec3 light_color = vec3(1.0);
-uniform vec3 sun_direction = normalize(vec3(-0.5, -0.5, 0.0));
+uniform vec3 sun_direction = normalize(vec3(0.5, 0.5, 0.0));
 uniform float sun_power = 200.0;
 
 
@@ -265,14 +265,15 @@ float get_light(vec3 rayPos, int lod)
 	// base_cloud *= (density_height_gradient/height_fraction);
   base_cloud *= density_height_gradient;
 
-
-  vec4 weather_data = textureLod(weather, weather_texture_scale*moving_uvw.xz, 4); // We use uvw.xz because we want weather to be applied in horizontal xz plane
+  // return base_cloud;
+  vec4 weather_data = textureLod(weather, weather_texture_scale*moving_uvw.xz, 0); // We use uvw.xz because we want weather to be applied in horizontal xz plane
   // Remember! Cloud coverage is stored in weather's red channel:
-  float cloud_coverage = weather_data.r*coverage_multiplier;
-
-  return clamp(mix(base_cloud, cloud_coverage, 0.7), 0.0, 1.0);
+  float cloud_coverage = weather_data.r*coverage_multiplier*density_height_gradient;
+  // return cloud_coverage;
+  // return clamp(mix(base_cloud, cloud_coverage, 0.0), 0.0, 1.0);
   
-  // base_cloud = mix(base_cloud, cloud_coverage, 0.8);
+  base_cloud = mix(base_cloud, cloud_coverage, 0.8);
+  return base_cloud;
   // base_cloud *= (1.0-density_height_gradient);
   float base_cloud_with_coverage = remap(base_cloud, cloud_coverage, 1.0, 0.0, 1.0);
   base_cloud_with_coverage *= cloud_coverage;
@@ -340,7 +341,6 @@ vec4 raymarchCloud(Ray ray_world, Ray ray_viewspace, float tnear, float tfar, ve
   float t = tnear;
   vec3 pos = ray_world.origin + ray_world.dir*tnear;
   const int oct = 5;
-  const vec3 sundir = normalize( vec3(-1.0,1.0,-1.0) );
   vec4 sum = vec4(0.0);
 
   float dt = (tfar-tnear)/190;
@@ -351,13 +351,14 @@ vec4 raymarchCloud(Ray ray_world, Ray ray_viewspace, float tnear, float tfar, ve
     {
 
       // Find directional derivative
-      // float dif = clamp((density-sampleCloudDensity(pos+3.0*sundir, 0))/3.0, 0.0, 1.0);
+      // float dif = clamp((density-sampleCloudDensity(pos+StepSize*sundir, 0))/StepSize, 0.0, 1.0);
       // float dif = clamp((sampleCloudDensity(pos-3.0*sundir, 8)-density)/3.0, 0.0, 1.0);
-      float dif = clamp((get_light(pos, 0)-get_light(pos+StepSize*sundir, 0))/StepSize, 0.0, 1.0);
+      // float dif = clamp((get_light(pos-StepSize*sun_direction,0)-get_light(pos,0))/StepSize, 0.0, 1.0);
+      float dif = clamp((get_light(pos, 0)-get_light(pos+StepSize*sun_direction, 0))/StepSize, 0.0, 1.0);
       
       // float dif = clamp((density-sampleCloudDensity(pos+StepSize*sundir, 8))/StepSize, 0.0, 1.0);
       // Does the light taper off because out of range BB?
-      dif = remap(log(dif+1.0), 0.0, 1.0, 0.0, 5.0); 
+      // dif = remap(log(dif+1.0), 0.0, 1.0, 0.0, 5.0); 
       // vec3  lin = vec3(0.65,0.65,0.75)*1.1 + 0.8*vec3(1.0,0.6,0.3)*dif*sun_power;
       vec3 lin = cloud_shadow_color*1.1 + 0.8*cloud_light_color*dif*sun_power;
       // vec3 lin = vec3(1.0);
@@ -429,5 +430,6 @@ void main()
     vec4 res = raymarchCloud(ray_world, ray_viewspace, tnear, tfar, view_space_obstacle);
     dst.xyz = dst.xyz*(1.0-res.a) + res.xyz;
   }
+  // dst = smoothstep(0.15,1.1,dst);
   imageStore(OutputFrag, fragCoord, dst);
 }
