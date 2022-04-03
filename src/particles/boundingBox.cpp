@@ -86,7 +86,7 @@ BoundingBox::BoundingBox(glm::vec3 low, glm::vec3 high, float cell_size)
 
     // this->resolution = glm::floor((high-low)/cell_size);
     this->resolution = glm::uvec3(16, 16, 8);
-    printf("GridRes: [%d, %d, %d]", resolution.x, resolution.y, resolution.z);
+    printf("GridRes: [%d, %d, %d]\n", resolution.x, resolution.y, resolution.z);
     numCells = this->resolution.x*this->resolution.y*this->resolution.z;
     boxShader = new Gloom::Shader();
     boxShader->makeBasicShader("../res/shaders/box.vert", "../res/shaders/box.frag");

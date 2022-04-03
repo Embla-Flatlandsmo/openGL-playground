@@ -43,25 +43,47 @@ vec3 getSun(const vec3 d, float powExp){
 	return col;
 }
 
+#define BAYER_FACTOR 0.5/16.0
+uniform float bayerFilter[16u] = float[]
+(
+	0.0*BAYER_FACTOR, 8.0*BAYER_FACTOR, 2.0*BAYER_FACTOR, 10.0*BAYER_FACTOR,
+	12.0*BAYER_FACTOR, 4.0*BAYER_FACTOR, 14.0*BAYER_FACTOR, 6.0*BAYER_FACTOR,
+	3.0*BAYER_FACTOR, 11.0*BAYER_FACTOR, 1.0*BAYER_FACTOR, 9.0*BAYER_FACTOR,
+	15.0*BAYER_FACTOR, 7.0*BAYER_FACTOR, 13.0*BAYER_FACTOR, 5.0*BAYER_FACTOR
+);
+
 vec3 getSkyColour(vec3 rayDir)
 {
-    vec3 sky = mix(skyColorBottom, skyColorTop, clamp(1-exp(-2*normalize(rayDir).y), 0.0, 1.0));
+    vec3 sky = mix(skyColorBottom, skyColorTop, clamp(1-exp(1.0-4*normalize(rayDir).y), 0.0, 1.0));
+    return sky;
+}
 
-    return sky + getSun(rayDir, 350.0);
+vec3 getWorldSpaceDir(vec3 clipSpaceCoord)
+{
+    vec4 ray_dir_ndc = vec4(clipSpaceCoord, 1.0);
+    vec4 ray_dir_view = inv_proj*ray_dir_ndc;
+
+    // I don't know why this works, but it does
+    ray_dir_view = vec4(ray_dir_view.xy, -1.0, 0.0);
+    vec4 ray_dir_world = (inv_view*ray_dir_view);
+
+    return normalize(ray_dir_world.xyz);
 }
 
 void main()
 {    
 	uvec2 fragCoord = uvec2(gl_FragCoord.xy);
+    vec3 clipSpaceFragCoord = fragToClipSpace(fragCoord);
 
-    vec4 ray_dir_ndc = vec4(fragToClipSpace(fragCoord), 1.0);
-    vec4 ray_dir_view = inv_proj*ray_dir_ndc;
+	int a = int(fragCoord.x) % 4;
+	int b = int(fragCoord.y) % 4;
 
-        // I don't know why this works, but it does
-    ray_dir_view = vec4(ray_dir_view.xy, -1.0, 0.0);
-    vec4 ray_dir_world = (inv_view*ray_dir_view);
+    vec3 ray_dir_dithered_world = getWorldSpaceDir(clipSpaceFragCoord+vec3(0.0, bayerFilter[a*4+b], 0.0));
+    vec3 ray_dir_world = getWorldSpaceDir(clipSpaceFragCoord);
 
-	FragColor = vec4(getSkyColour(normalize(ray_dir_world.xyz)), 1.0);
+    vec3 color = getSkyColour(ray_dir_dithered_world) + getSun(ray_dir_world, 350.0);
+
+	FragColor = vec4(color, 1.0);
 }
 
 

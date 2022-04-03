@@ -37,7 +37,6 @@ uniform vec3 light_color = vec3(1.0);
 uniform vec3 sun_direction = normalize(vec3(0.5, 0.5, 0.0));
 uniform float sun_power = 200.0;
 
-
 //=============== ENVIRONMENT UNIFORMS ===============//
 // uniform float near = 0.1;
 // uniform float far = 350.0;
@@ -46,7 +45,7 @@ uniform float sun_power = 200.0;
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 layout (rgba8, binding = 0) uniform image2D OutputFrag;
 
-#define STEPS_PRIMARY 200
+#define RAYMARCH_STEPS 200
 
 
 // Maps a value from one range to another
@@ -343,8 +342,8 @@ vec4 raymarchCloud(Ray ray_world, Ray ray_viewspace, float tnear, float tfar, ve
   const int oct = 5;
   vec4 sum = vec4(0.0);
 
-  float dt = (tfar-tnear)/190;
-  for (int i = 0; i < 190; i++)
+  float dt = (tfar-t)/float(RAYMARCH_STEPS);
+  for (int i = 0; i < RAYMARCH_STEPS; i++)
   {
     float density = sampleCloudDensity(pos, 0);
     if (density > 0.01)
@@ -378,7 +377,11 @@ vec4 raymarchCloud(Ray ray_world, Ray ray_viewspace, float tnear, float tfar, ve
     vec3 ray_viewspace_position = ray_viewspace.origin + ray_viewspace.dir*t;
     if (t > tfar) break;
     if (ray_viewspace_position.z <= view_space_obstacle.z) break; // TODO: Figure out how to integrate until exact t value
-    if (sum.a > 0.99) break;
+    if (sum.a > 0.99)
+    {
+      // sum.a = 1.0;
+      break;
+    }
     t += dt;
     pos = ray_world.origin + ray_world.dir*t;
   }
@@ -386,12 +389,21 @@ vec4 raymarchCloud(Ray ray_world, Ray ray_viewspace, float tnear, float tfar, ve
   return clamp(sum, 0.0, 1.0);
 }
 
+#define BAYER_FACTOR 5.0/16.0
+uniform float bayerFilter[16u] = float[]
+(
+	0.0*BAYER_FACTOR, 8.0*BAYER_FACTOR, 2.0*BAYER_FACTOR, 10.0*BAYER_FACTOR,
+	12.0*BAYER_FACTOR, 4.0*BAYER_FACTOR, 14.0*BAYER_FACTOR, 6.0*BAYER_FACTOR,
+	3.0*BAYER_FACTOR, 11.0*BAYER_FACTOR, 1.0*BAYER_FACTOR, 9.0*BAYER_FACTOR,
+	15.0*BAYER_FACTOR, 7.0*BAYER_FACTOR, 13.0*BAYER_FACTOR, 5.0*BAYER_FACTOR
+);
+
 void main()
 {
   ivec2 fragCoord = ivec2(gl_GlobalInvocationID.xy);
   ivec2 size = imageSize(OutputFrag);
   if (fragCoord.x > viewport.z || fragCoord.y > viewport.w) return;
-
+  
   Ray ray_viewspace;
   // Create ray origin and direction
   // Transfer from screen space -> clip space -> world space 
@@ -418,11 +430,15 @@ void main()
   ray_viewspace.dir = normalize(ray_dir_view.xyz);
   float tnear, tfar;
   bool hit = RayAABBIntersection(ray_world, AABBmin, AABBmax, tnear, tfar);
-
+	int a = int(fragCoord.x) % 4;
+	int b = int(fragCoord.y) % 4;
+	// tnear += 0.1*(tfar-tnear)*bayerFilter[a * 4 + b];
+  tnear += bayerFilter[a*4+b];
   // Boid position (if there is one) in view space:
   vec3 view_space_obstacle = VSPositionFromDepth(fragCoordToUV(fragCoord));
 
   vec4 dst = texture(frag_color, fragCoordToUV(fragCoord));
+  dst.a = 1.0;
   // vec4 dst = vec4(vec3(1.0),1.0);
   // vec4 dst = vec4(0.0,0.74902, 1.0, 1.0);
   if (hit)

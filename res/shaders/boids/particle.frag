@@ -25,7 +25,7 @@ float fogIntensity(float d)
 void main() {
 	// Lambert's cosine law
   	float lambertian = max(dot(normalize(normal_in), normalize(light_direction)), 0.0);
-	vec4 color = vec4(1.0*lambertian*diffuseColor+0.2*ambientColor, 1.0);
+	vec4 color = vec4(0.8*lambertian*diffuseColor+0.2*ambientColor, 1.0);
 	// float fog_length = (gl_DepthRange.diff * frag_pos.z + 
     //             gl_DepthRange.far + gl_DepthRange.near) / 2.0;
 	// float fog_length = (gl_DepthRange.diff* frag_pos.z + gl_DepthRange.far + gl_DepthRange.near) / 2.0;
