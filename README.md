@@ -8,6 +8,7 @@ As of right now, `main` implements the boids algorithm, optimized by using a reg
 ![The state of it right now](the-state-of-it.gif)
 
 ## TODO:
+### Boids
 - [x] Visualize bounding box as a wireframe
 - [x] Visualize particles as tetrahedrons (using instancing)
 - [x] Visualize particles as arbitrary meshes
@@ -22,7 +23,23 @@ As of right now, `main` implements the boids algorithm, optimized by using a reg
 - [ ] Make number of cells configurable (fixed to 2048 because of prefix sum shader now)
 - [ ] Wrap-around distance checking
 - [ ] Do the rest of the things necessary to make A MILLION BOIDS!!!!
+- [x] Lambertian lighting for boids
+
+### Clouds
+- [x] Parametric rendering in fragment shader
+- [x] Use CPU camera to do viewing transform in frag shader
+- [x] Ray tracing in compute shader
+- [x] Sample texture in compute shader
+- [x] Multi-texturing (store fragment position in texture)
+- [x] Implement clouds simulation
+- [x] Implement depth-checking for ray tracing in compute shader
+- [x] Fog
+
+### Finishing touches
+- [ ] Some post-processing effects? Glare, tonemapping etc
 - [ ] Come up with a good way to structure the program
+- [x] dithering for clouds etc
+
 
 ### Less important TODOs:
 - [ ] Make a better obj loader (that doesn't emit so many warnings)

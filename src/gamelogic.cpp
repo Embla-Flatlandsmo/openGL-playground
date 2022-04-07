@@ -30,10 +30,14 @@
 #include "utilities/imageLoader.hpp"
 #include "utilities/glfont.h"
 #include "particles/particleSystem.hpp"
+#include "clouds/cloudBox.hpp"
+#include "sky/sky.hpp"
 
 enum KeyFrameAction {
     BOTTOM, TOP
 };
+
+bool toggleDebug = false;
 
 #include <timestamps.h>
 
@@ -48,6 +52,9 @@ SceneNode* boxNode;
 SceneNode* ballNode;
 SceneNode* padNode;
 
+// SceneNode* cloudNode;
+
+
 double ballRadius = 3.0f;
 
 // These are heap allocated, because they should not be initialised at the start of the program
@@ -56,6 +63,10 @@ Gloom::Shader* shader;
 sf::Sound* sound;
 Gloom::Camera* camera;
 ParticleSystem* particles;
+CloudBox* cloud;
+Sky* sky;
+
+ScreenQuad* screen;
 
 // const glm::vec3 boxDimensions(180, 90, 90);
 const glm::vec3 boxDimensions(300, 150, 150);
@@ -92,17 +103,33 @@ void mouseCallback(GLFWwindow* window, double x, double y) {
 
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     camera->handleMouseButtonInputs(button, action);
+
 }
 
 void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    camera->handleKeyboardInputs(key, action);
-}
 
-//// A few lines to help you if you've never used c++ structs
-// struct LightSource {
-//     bool a_placeholder_value;
-// };
-// LightSource lightSources[/*Put number of light sources you want here*/];
+    camera->handleKeyboardInputs(key, action);
+    if (action == GLFW_PRESS) {
+        switch(key) 
+        {
+            case GLFW_KEY_U:
+                screen->incrementCurrentEffect();
+                break;
+            case GLFW_KEY_J:
+                screen->decrementCurrentEffect();
+                break;
+            case GLFW_KEY_R:
+                particles->resetPositions();
+                break;
+            case GLFW_KEY_Y:
+                toggleDebug = !toggleDebug;
+                particles->setDebug(toggleDebug);
+                cloud->setDebug(toggleDebug);
+                break;
+
+        }
+    }
+}
 
 void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     buffer = new sf::SoundBuffer();
@@ -119,9 +146,10 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     // glfwSetMouseButtonCallback(window, mouseButtonCallback);
     glfwSetKeyCallback(window, keyboardCallback);
 
-
+    screen = new ScreenQuad();
     camera = new Gloom::Camera(glm::vec3(20, 20, 70));
     shader = new Gloom::Shader();
+    sky = new Sky();
     shader->makeBasicShader("../res/shaders/simple.vert", "../res/shaders/simple.frag");
     shader->activate();
 
@@ -138,7 +166,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     rootNode->children.push_back(boxNode);
     boxNode->vertexArrayObjectID = boxVAO;
     boxNode->VAOIndexCount = box.indices.size();
-
+    cloud = new CloudBox(glm::vec3(-150.,-20.,-150.), glm::vec3(150., 50., 150.)); // Why is it multiplied by 10?
     particles = new ParticleSystem(glm::vec3(10.,10.,10.), glm::vec3(40., 40., 40.));
 
     getTimeDeltaSeconds();
@@ -152,7 +180,7 @@ void updateFrame(GLFWwindow* window) {
     double timeDelta = getTimeDeltaSeconds();
 
     camera->updateCamera(timeDelta);
-    glm::mat4 projection = glm::perspective(glm::radians(80.0f), float(windowWidth) / float(windowHeight), 0.1f, 350.f);
+    glm::mat4 projection = camera->getProjMatrix();
 
     glm::mat4 VP = projection * camera->getViewMatrix();
     particles->update();
@@ -196,7 +224,7 @@ void renderNode(SceneNode* node) {
         case SPOT_LIGHT: break;
     }
 
-    for(SceneNode* child : node->children) {
+    for(SceneNode* child : node->children) { 
         renderNode(child);
     }
 }
@@ -205,35 +233,54 @@ void renderFrame(GLFWwindow* window) {
     int windowWidth, windowHeight;
     glfwGetWindowSize(window, &windowWidth, &windowHeight);
     glViewport(0, 0, windowWidth, windowHeight);
+
+    screen->bindFramebuffer();
+    sky->render(camera);
     particles->render(window, camera);
-    shader->activate();
-    renderNode(rootNode);
+
+    // shader->activate();
+    // renderNode(rootNode);
+    cloud->setDepthBuffer(screen->depth_texture);
+    cloud->setColorBuffer(screen->color_texture);
+    cloud->render(camera);
+    screen->unbindFramebuffer();
+
+
+    screen->draw();
+
 }
 
 void renderUI(void) {
-    // ImGui::ShowDemoWindow
+
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
+    // ImGui::ShowDemoWindow();
 
-    ImGui::Begin("Boid properties");
-    ImGui::SliderFloat("Size", &(particles->boidProperties.size), 0.1f, 2.0f);
-    ImGui::SliderFloat("Cohesion", &(particles->boidProperties.cohesion_factor), 0.0f, 1.5f);
-    ImGui::SliderFloat("Alignment", &(particles->boidProperties.alignment_factor), 0.0f, 1.5f);
-    ImGui::SliderFloat("Separation", &(particles->boidProperties.separation_factor), 0.0f, 1.5f);
-    ImGui::SliderFloat("Separation Range", &(particles->boidProperties.separation_range), 0.0f, 3.0f); // Max is view range
-    ImGui::SliderFloat("Boundary avoidance", &(particles->boidProperties.boundary_avoidance_factor), 0.0f, 0.2f);
-    ImGui::SliderFloat("dt", &(particles->boidProperties.dt), 0.0f, 2.0);
-    ImGui::SliderFloat("Max velocity", &(particles->boidProperties.max_vel), 0.0f, 4.0f);
-    ImGui::Checkbox("Wrap around", &(particles->boidProperties.wrap_around));
-    ImGui::End();
+    const float DISTANCE = 10.0f;
+    ImVec2 diagnostics_window_pos = ImVec2(DISTANCE, DISTANCE);
+    ImVec2 diagnostics_window_pivot = ImVec2(0.0f, 0.0f);
+    // ImVec2 window_pos = ImVec2((corner & 1) ? windowWidth - DISTANCE : DISTANCE, (corner & 2) ? windowHeight - DISTANCE : DISTANCE);
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove;
+    // ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
+    ImGui::SetNextWindowPos(diagnostics_window_pos, ImGuiCond_Always, diagnostics_window_pivot);
+    ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
     
-    ImGui::Begin("Diagonstics");
+    ImGui::Begin("Diagonstics", NULL, window_flags);
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
                         1000.0f / ImGui::GetIO().Framerate,
                         ImGui::GetIO().Framerate);
+    ImGui::Separator();
+    ImGui::Text("Controls:\nCamera: WASDEQ, Arrows, N\nDebug: Y\nReset: R");
     ImGui::End();
+
+    if (toggleDebug)
+    {
+        particles->renderUI();
+        cloud->renderUI();
+        screen->renderUI();
+    }
 
 
     ImGui::Render();

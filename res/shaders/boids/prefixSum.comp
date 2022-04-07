@@ -1,0 +1,64 @@
+#version 430 
+
+layout( local_size_x = 1024, local_size_y = 1, local_size_z = 1 ) in;
+
+
+layout(std430, binding=4) buffer prefixSum
+{
+    uint output_data[];
+};
+
+layout(std430, binding=5) readonly buffer bucketSize
+{
+    uint input_data[];
+};
+
+shared uint shared_data[gl_WorkGroupSize.x*2];
+
+layout(location=1) uniform uint chunkSize;
+layout(location=2) uniform uint numCells;
+
+void main(void) {
+    uint id = gl_GlobalInvocationID.x;
+    uint rd_id;
+    uint wr_id;
+    uint mask;
+
+    // The number of steps is the log base 2 of the
+    // work group size, which should be a power of 2
+
+    const uint steps = uint(log2(gl_WorkGroupSize.x))+1;
+    uint iter = 0;
+
+    // Each invocation is responsible for the content of
+    // two elements of the output array
+    shared_data[id*2] = input_data[id*2];
+    shared_data[id*2+1] = input_data[id*2+1];
+
+    // Synchronize to make sure that everyone has initialized
+    // their elements of shared_data[] with data loaded from
+    // the input arrays
+
+    barrier();
+    memoryBarrierShared();
+
+    // For each step...
+    for (iter = 0; iter < steps; iter++)
+    {
+        // Calculate the read and write index in shared array
+        mask = (1 << iter) - 1;
+        rd_id = ((id >> iter) << (iter+1)) + mask;
+        wr_id = rd_id + 1 + (id & mask);
+
+        // Accumulate the read data into our element
+        shared_data[wr_id] += shared_data[rd_id];
+
+        // Synchronize again to make sure that everyone has caught up with us
+        barrier();
+        memoryBarrierShared();
+    }
+
+    // Finally, write data back to output
+    output_data[id*2]=shared_data[id*2];
+    output_data[id*2+1]=shared_data[id*2+1];
+}

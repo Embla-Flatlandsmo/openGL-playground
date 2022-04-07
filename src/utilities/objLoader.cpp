@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 #include <utilities/mesh.h>
 #include <fstream>
+#include <string.h>
 
 /**
  * @brief Loads .OBJ files. From http://www.opengl-tutorial.org/beginners-tutorials/tutorial-7-model-loading/

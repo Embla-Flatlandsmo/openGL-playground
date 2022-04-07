@@ -7,6 +7,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/transform.hpp>
+#include <utilities/window.hpp>
 #include <GLFW/glfw3.h>
 
 
@@ -16,7 +19,7 @@ namespace Gloom
     {
     public:
         Camera(glm::vec3 position         = glm::vec3(0.0f, 0.0f, 2.0f),
-               GLfloat   movementSpeed    = 5.0f,
+               GLfloat   movementSpeed    = 15.0f,
                GLfloat   mouseSensitivity = 0.005f)
         {
             cPosition         = position;
@@ -32,6 +35,8 @@ namespace Gloom
         /* Getter for the view matrix */
         glm::mat4 getViewMatrix() { return matView; }
 
+        /* Getter for the projection matrix */
+        glm::mat4 getProjMatrix() { return matProj; }
 
         /* Handle keyboard inputs from a callback mechanism */
         void handleKeyboardInputs(int key, int action)
@@ -122,7 +127,14 @@ namespace Gloom
 
             if (keysInUse[GLFW_KEY_Q])  // vertical down
                 fMovement -= dirY;
-            
+            if (keysInUse[GLFW_KEY_UP])
+                fPitch -= 2.0;
+            if (keysInUse[GLFW_KEY_DOWN])
+                fPitch += 2.0;
+            if (keysInUse[GLFW_KEY_RIGHT])
+                fYaw += 2.0;
+            if (keysInUse[GLFW_KEY_LEFT])
+                fYaw -= 2.0;
             if (keysInUse[GLFW_KEY_N]) // Neutral rotation
                 cQuaternion = glm::quat(glm::vec3(0, 0, 0));
 
@@ -185,7 +197,7 @@ namespace Gloom
         // Variables used for bookkeeping
         GLboolean resetMouse     = true;
         GLboolean isMousePressed = false;
-        GLboolean keysInUse[512];
+        GLboolean keysInUse[512] = { 0 };
 
         // Last cursor position
         GLfloat lastXPos = 0.0f;
@@ -197,6 +209,9 @@ namespace Gloom
 
         // View matrix
         glm::mat4 matView;
+
+        // Projection matrix
+        glm::mat4 matProj = glm::perspective(glm::radians(80.0f), float(windowWidth) / float(windowHeight), 0.1f, 350.f);
     };
 }
 

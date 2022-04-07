@@ -14,6 +14,10 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 
+#include "utilities/imgui/imgui.h"
+#include "utilities/imgui/imgui_impl_glfw.h"
+#include "utilities/imgui/imgui_impl_opengl3.h"
+
 #define WORK_GROUP_SIZE 1024
 
 ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
@@ -27,11 +31,11 @@ ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
     particleAccs = new struct acc[NUM_PARTICLES];
 
     colorShader = new Gloom::Shader();
-    colorShader->makeBasicShader("../res/shaders/particle.vert", "../res/shaders/particle.frag");
+    colorShader->makeBasicShader("../res/shaders/boids/particle.vert", "../res/shaders/boids/particle.frag");
 
     // The compute shader must be in its own program
     computeShader = new Gloom::Shader();
-    computeShader->attach("../res/shaders/particle.comp");
+    computeShader->attach("../res/shaders/boids/particle.comp");
     computeShader->link();
 
     // We set the uniforms for the bounding box in the compute shader only once
@@ -43,7 +47,7 @@ ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
     computeShader->deactivate();
 
     forceShader = new Gloom::Shader();
-    forceShader->attach("../res/shaders/computeForce.comp");
+    forceShader->attach("../res/shaders/boids/computeForce.comp");
     forceShader->link();
 
     // We set the uniforms for the bounding box in the compute shader only once
@@ -122,7 +126,7 @@ void ParticleSystem::render(GLFWwindow *window, Gloom::Camera *camera)
     glfwGetWindowSize(window, &windowWidth, &windowHeight);
 
     // We set a projection matrix to get some perspective going!
-    glm::mat4 projection = glm::perspective(glm::radians(80.0f), float(windowWidth) / float(windowHeight), 0.1f, 350.f);
+    glm::mat4 projection = camera->getProjMatrix();
     glm::mat4 VP = projection * camera->getViewMatrix();
 
     if (debug)
@@ -132,7 +136,7 @@ void ParticleSystem::render(GLFWwindow *window, Gloom::Camera *camera)
     colorShader->activate();
     glUniform1f(colorShader->getUniformFromName("particleSize"), boidProperties.size);
     glUniformMatrix4fv(colorShader->getUniformFromName("VP"), 1, GL_FALSE, glm::value_ptr(VP));
-
+    glUniform3fv(colorShader->getUniformFromName("camera_pos"), 1, glm::value_ptr(glm::vec3(camera->getViewMatrix()[3])));
     glBindVertexArray(particleVAO);
     // Finally we draw the particles
     // glDrawArrays(GL_POINTS, 0, NUM_PARTICLES);
@@ -140,9 +144,27 @@ void ParticleSystem::render(GLFWwindow *window, Gloom::Camera *camera)
     colorShader->deactivate();
 }
 
-void ParticleSystem::setDebugMode(bool debug)
+void ParticleSystem::setDebug(bool enable)
 {
-    this->debug = debug;
+    debug = enable;
+}
+
+void ParticleSystem::renderUI(void)
+{
+    if (debug)
+    {
+        ImGui::Begin("Boid properties");
+        ImGui::SliderFloat("Size", &boidProperties.size, 0.01f, 0.3f);
+        ImGui::SliderFloat("Cohesion", &boidProperties.cohesion_factor, 0.0f, 1.5f);
+        ImGui::SliderFloat("Alignment", &boidProperties.alignment_factor, 0.0f, 1.5f);
+        ImGui::SliderFloat("Separation", &boidProperties.separation_factor, 0.0f, 1.5f);
+        ImGui::SliderFloat("Separation Range", &boidProperties.separation_range, 0.0f, 3.0f); // Max is view range
+        ImGui::SliderFloat("Boundary avoidance", &boidProperties.boundary_avoidance_factor, 0.0f, 0.2f);
+        ImGui::SliderFloat("dt", &boidProperties.dt, 0.0f, 2.0);
+        ImGui::SliderFloat("Max velocity", &boidProperties.max_vel, 0.0f, 4.0f);
+        ImGui::Checkbox("Wrap around", &boidProperties.wrap_around);
+        ImGui::End();
+    }
 }
 
 /**
@@ -236,11 +258,11 @@ void ParticleSystem::initParticles()
 void ParticleSystem::initGridSorting() 
 {
     prefixSumShader = new Gloom::Shader();
-    prefixSumShader->attach("../res/shaders/prefixSum.comp");
+    prefixSumShader->attach("../res/shaders/boids/prefixSum.comp");
     prefixSumShader->link();
 
     gridBucketsShader = new Gloom::Shader();
-    gridBucketsShader->attach("../res/shaders/gridBuckets.comp");
+    gridBucketsShader->attach("../res/shaders/boids/gridBuckets.comp");
     gridBucketsShader->link();
     gridBucketsShader->activate();
     glUniform3fv(gridBucketsShader->getUniformFromName("boundingBoxLow"), 1, glm::value_ptr(boundingBox->low));
@@ -250,7 +272,7 @@ void ParticleSystem::initGridSorting()
     gridBucketsShader->deactivate();
     
     reindexShader = new Gloom::Shader();
-    reindexShader->attach("../res/shaders/reindex.comp");
+    reindexShader->attach("../res/shaders/boids/reindex.comp");
     reindexShader->link();
     reindexShader->activate();
     glUniform3fv(reindexShader->getUniformFromName("boundingBoxLow"), 1, glm::value_ptr(boundingBox->low));
@@ -374,3 +396,24 @@ void ParticleSystem::computeReindexGrid() {
 
     reindexShader->deactivate();
 } 
+
+void ParticleSystem::resetPositions(void)
+{
+    GLint bufMask = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
+
+    // Positions
+    uint32_t positions_size = NUM_PARTICLES * sizeof(struct pos);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, particlePosSSBO);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, NUM_PARTICLES * sizeof(struct pos), particlePoints, GL_DYNAMIC_COPY);
+
+    particlePoints = (struct pos *)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, positions_size, bufMask);
+    glm::vec3 diagonal = boundingBox->high-boundingBox->low;
+    for (int i = 0; i < NUM_PARTICLES; i++)
+    {
+        particlePoints[i].x = boundingBox->low.x+diagonal.x*(rand() / (float)RAND_MAX);
+        particlePoints[i].y = boundingBox->low.y+diagonal.y*(rand() / (float)RAND_MAX);
+        particlePoints[i].z = boundingBox->low.z+diagonal.z*(rand() / (float)RAND_MAX);
+        particlePoints[i].w = 1.0;
+    }
+    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+}
