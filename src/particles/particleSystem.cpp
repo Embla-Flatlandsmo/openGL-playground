@@ -14,6 +14,10 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 
+#include "utilities/imgui/imgui.h"
+#include "utilities/imgui/imgui_impl_glfw.h"
+#include "utilities/imgui/imgui_impl_opengl3.h"
+
 #define WORK_GROUP_SIZE 1024
 
 ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
@@ -140,9 +144,27 @@ void ParticleSystem::render(GLFWwindow *window, Gloom::Camera *camera)
     colorShader->deactivate();
 }
 
-void ParticleSystem::setDebugMode(bool debug)
+void ParticleSystem::setDebug(bool enable)
 {
-    this->debug = debug;
+    debug = enable;
+}
+
+void ParticleSystem::renderUI(void)
+{
+    if (debug)
+    {
+        ImGui::Begin("Boid properties");
+        ImGui::SliderFloat("Size", &boidProperties.size, 0.01f, 0.3f);
+        ImGui::SliderFloat("Cohesion", &boidProperties.cohesion_factor, 0.0f, 1.5f);
+        ImGui::SliderFloat("Alignment", &boidProperties.alignment_factor, 0.0f, 1.5f);
+        ImGui::SliderFloat("Separation", &boidProperties.separation_factor, 0.0f, 1.5f);
+        ImGui::SliderFloat("Separation Range", &boidProperties.separation_range, 0.0f, 3.0f); // Max is view range
+        ImGui::SliderFloat("Boundary avoidance", &boidProperties.boundary_avoidance_factor, 0.0f, 0.2f);
+        ImGui::SliderFloat("dt", &boidProperties.dt, 0.0f, 2.0);
+        ImGui::SliderFloat("Max velocity", &boidProperties.max_vel, 0.0f, 4.0f);
+        ImGui::Checkbox("Wrap around", &boidProperties.wrap_around);
+        ImGui::End();
+    }
 }
 
 /**
@@ -374,3 +396,24 @@ void ParticleSystem::computeReindexGrid() {
 
     reindexShader->deactivate();
 } 
+
+void ParticleSystem::resetPositions(void)
+{
+    GLint bufMask = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
+
+    // Positions
+    uint32_t positions_size = NUM_PARTICLES * sizeof(struct pos);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, particlePosSSBO);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, NUM_PARTICLES * sizeof(struct pos), particlePoints, GL_DYNAMIC_COPY);
+
+    particlePoints = (struct pos *)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, positions_size, bufMask);
+    glm::vec3 diagonal = boundingBox->high-boundingBox->low;
+    for (int i = 0; i < NUM_PARTICLES; i++)
+    {
+        particlePoints[i].x = boundingBox->low.x+diagonal.x*(rand() / (float)RAND_MAX);
+        particlePoints[i].y = boundingBox->low.y+diagonal.y*(rand() / (float)RAND_MAX);
+        particlePoints[i].z = boundingBox->low.z+diagonal.z*(rand() / (float)RAND_MAX);
+        particlePoints[i].w = 1.0;
+    }
+    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+}

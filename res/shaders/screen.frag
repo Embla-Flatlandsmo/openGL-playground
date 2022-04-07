@@ -61,11 +61,7 @@ void main()
 
             break;  
         case INVERT:
-            // color = vec4(texture(depthTexture, texCoords).rrr, 1.0);
-            // color = vec4(texture(depthTexture, texCoords).zzz, 1.0);
-            color = vec4(texture(depthTexture, texCoords).rrr, 1.0);
-            // color = vec4(vec3(texture(depthTexture, texCoords).zzz)/255.0, 1.0);
-            // color = vec4(vec3(1.0 - texture(screenTexture, texCoords)), 1.0);
+            color = vec4(vec3(1.0 - texture(screenTexture, texCoords)), 1.0);
             break;
         case BLUR:
             float gaussian_kernel[9] = float[](
@@ -89,6 +85,7 @@ void main()
     }
 
     // tonemap
+    // TODO: This appears to make the clouds see-through. Fix?
     color = smoothstep(0.15,1.1,color);
-
+    color.a = 1.0;
 }

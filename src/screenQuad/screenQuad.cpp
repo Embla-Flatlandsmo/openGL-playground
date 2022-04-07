@@ -12,6 +12,10 @@
 #include <string.h>
 #include <iostream>
 
+#include "utilities/imgui/imgui.h"
+#include "utilities/imgui/imgui_impl_glfw.h"
+#include "utilities/imgui/imgui_impl_opengl3.h"
+
 std::string stringFromEnum(ScreenEffect effect) {
     switch(effect){
         case NORMAL:
@@ -135,6 +139,25 @@ void ScreenQuad::draw(void)
     glBindVertexArray(0);
     glUseProgram(0);
     return;
+}
+
+void ScreenQuad::renderUI(void)
+{
+    ImGui::Begin("Post Processing Effect");
+    const char* items[] = { "Normal", "Chromatic Aberration", "Inverted", "Blurred", "Sharpened" };
+    static int item_current = 0;
+    ImGui::Combo("Effect", &item_current, items, IM_ARRAYSIZE(items));
+    current_effect = (ScreenEffect)item_current;
+    // ImGui::SliderFloat("Size", &boidProperties.size, 0.1f, 2.0f);
+    // ImGui::SliderFloat("Cohesion", &boidProperties.cohesion_factor, 0.0f, 1.5f);
+    // ImGui::SliderFloat("Alignment", &boidProperties.alignment_factor, 0.0f, 1.5f);
+    // ImGui::SliderFloat("Separation", &boidProperties.separation_factor, 0.0f, 1.5f);
+    // ImGui::SliderFloat("Separation Range", &boidProperties.separation_range, 0.0f, 3.0f); // Max is view range
+    // ImGui::SliderFloat("Boundary avoidance", &boidProperties.boundary_avoidance_factor, 0.0f, 0.2f);
+    // ImGui::SliderFloat("dt", &boidProperties.dt, 0.0f, 2.0);
+    // ImGui::SliderFloat("Max velocity", &boidProperties.max_vel, 0.0f, 4.0f);
+    // ImGui::Checkbox("Wrap around", &boidProperties.wrap_around);
+    ImGui::End();
 }
 
 /**

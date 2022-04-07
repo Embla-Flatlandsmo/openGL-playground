@@ -8,6 +8,22 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
+
+struct cloudProperties
+{
+    float step_size = 3.0f;
+    float coverage_multiplier = 1.0f;
+    float texture_scale = 2.0f;
+    float weather_texture_scale = 0.03f;
+    float cloud_speed = 10.0f;
+    float density_factor = 1.0f;
+    float sun_power = 30.0f;
+    float fog_factor = 0.75f;
+
+    glm::vec3 cloud_shadow_color = glm::vec3(0.65,0.65,0.75);
+    glm::vec3 cloud_light_color =  glm::vec3(1.0,0.6,0.3);
+};
+
 class CloudBox 
 {
     public:
@@ -18,6 +34,7 @@ class CloudBox
         void setDepthBuffer(GLuint textureID);
         void setColorBuffer(GLuint textureID);
         void updateSun(glm::vec3 direction);
+        void setDebug(bool enable);
     private:
         void generateTextures();
         void generateWeatherMap();
@@ -39,14 +56,6 @@ class CloudBox
         GLuint worley32 = 0;
         GLuint weatherTex = 0;
 
-        float step_size = 0.5f;
-        float coverage_multiplier = 1.0f;
-        float texture_scale = 2.0f;
-        float weather_texture_scale = 0.03f;
-        float cloud_speed = 10.0f;
-        float density_factor = 1.0f;
-        float sun_power = 10.0f;
-        float fog_factor = 0.75f;
-        glm::vec3 cloud_shadow_color = glm::vec3(0.65,0.65,0.75);
-        glm::vec3 cloud_light_color =  glm::vec3(1.0,0.6,0.3);
+        bool debug = false;
+        struct cloudProperties cloud_properties;
 };

@@ -28,6 +28,8 @@ void runProgram(GLFWwindow* window, CommandLineOptions options)
     // Disable built-in dithering
     // glDisable(GL_DITHER);
 
+    // glEnable(GL_MULTISAMPLE);
+
     // Enable transparency
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

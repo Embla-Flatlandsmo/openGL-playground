@@ -31,7 +31,7 @@ class ScreenQuad
         void draw(void);
         void bindFramebuffer(void);
         void unbindFramebuffer(void);
-
+        void renderUI(void);
         void incrementCurrentEffect(void);
         void decrementCurrentEffect(void);
         GLuint color_texture;

@@ -68,7 +68,7 @@ void CloudBox::render(Gloom::Camera *camera)
 {
 
 
-    glm::mat4 projection = glm::perspective(glm::radians(80.0f), float(windowWidth) / float(windowHeight), 0.1f, 350.f);
+    glm::mat4 projection = camera->getProjMatrix();
     glm::mat4 VP = projection * camera->getViewMatrix();
     glm::mat4 inverse_mvp = glm::inverse(VP);
     // glm::vec3 camera_position = glm::vec3(camera->getViewMatrix()[3]);
@@ -87,23 +87,17 @@ void CloudBox::render(Gloom::Camera *camera)
     glUniformMatrix4fv(rayMarchCloud->getUniformFromName("view"), 1, false, glm::value_ptr(camera->getViewMatrix()));
     glUniform4fv(rayMarchCloud->getUniformFromName("viewport"), 1, glm::value_ptr(glm::vec4(0.0,0.0, windowWidth, windowHeight)));
 
-
-        // float step_size = 0.5f;
-        // float coverage_multiplier = 0.4f;
-        // float texture_scale = 1.0f;
-        // float cloud_speed = 10.0f;
-        // float density_factor = 0.2f;
-    glUniform1f(rayMarchCloud->getUniformFromName("StepSize"), step_size);
-    glUniform1f(rayMarchCloud->getUniformFromName("coverage_multiplier"), coverage_multiplier);
-    glUniform1f(rayMarchCloud->getUniformFromName("cloud_speed"), cloud_speed);
-    glUniform1f(rayMarchCloud->getUniformFromName("density_factor"), density_factor);
-    glUniform1f(rayMarchCloud->getUniformFromName("texture_scale"), texture_scale);
-    glUniform1f(rayMarchCloud->getUniformFromName("weather_texture_scale"), weather_texture_scale);
-    glUniform1f(rayMarchCloud->getUniformFromName("sun_power"), sun_power);
-    glUniform1f(rayMarchCloud->getUniformFromName("fog_factor"), fog_factor);
+    glUniform1f(rayMarchCloud->getUniformFromName("StepSize"), cloud_properties.step_size);
+    glUniform1f(rayMarchCloud->getUniformFromName("coverage_multiplier"), cloud_properties.coverage_multiplier);
+    glUniform1f(rayMarchCloud->getUniformFromName("cloud_speed"), cloud_properties.cloud_speed);
+    glUniform1f(rayMarchCloud->getUniformFromName("density_factor"), cloud_properties.density_factor);
+    glUniform1f(rayMarchCloud->getUniformFromName("texture_scale"), cloud_properties.texture_scale);
+    glUniform1f(rayMarchCloud->getUniformFromName("weather_texture_scale"), cloud_properties.weather_texture_scale);
+    glUniform1f(rayMarchCloud->getUniformFromName("sun_power"), cloud_properties.sun_power);
+    glUniform1f(rayMarchCloud->getUniformFromName("fog_factor"), cloud_properties.fog_factor);
     glUniform3fv(rayMarchCloud->getUniformFromName("light_direction"), 1, glm::value_ptr(glm::normalize(glm::vec3(0.5, 1.0, 0.5))));
-    glUniform3fv(rayMarchCloud->getUniformFromName("cloud_shadow_color"), 1, glm::value_ptr(cloud_shadow_color));
-    glUniform3fv(rayMarchCloud->getUniformFromName("cloud_light_color"), 1, glm::value_ptr(cloud_light_color));
+    glUniform3fv(rayMarchCloud->getUniformFromName("cloud_shadow_color"), 1, glm::value_ptr(cloud_properties.cloud_shadow_color));
+    glUniform3fv(rayMarchCloud->getUniformFromName("cloud_light_color"), 1, glm::value_ptr(cloud_properties.cloud_light_color));
     // Set sampler 0
     glActiveTexture(GL_TEXTURE0);
 
@@ -204,21 +198,28 @@ void CloudBox::generateWeatherMap() {
 	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 }
 
+void CloudBox::setDebug(bool enable)
+{
+    debug = enable;
+}
 
 void CloudBox::renderUI()
 {
-    ImGui::Begin("Clouds properties");
-    ImGui::SliderFloat("Step size", &step_size, 0.5f, 3.f);
-    ImGui::SliderFloat("Coverage", &coverage_multiplier, 0.0f, 1.0f);
-    ImGui::SliderFloat("Cloud speed", &cloud_speed, 0.0f, 50.0f);
-    ImGui::SliderFloat("Density Factor", &density_factor, 0.01f, 1.0f);
-    ImGui::SliderFloat("Texture Scale", &texture_scale, 0.05f, 10.0f);
-    ImGui::SliderFloat("Weather Texture Scale", &weather_texture_scale, 0.05f, 10.0f);
-    ImGui::SliderFloat("Sun power", &sun_power, 0.0f, 200.0f);
-    ImGui::SliderFloat("Fog factor", &fog_factor, 0.0f, 3.f);
-    ImGui::SliderFloat3("cloud Light color", (float*)&cloud_light_color, 0.0f, 1.0f);
-    ImGui::SliderFloat3("Cloud Shadow Color", (float*)&cloud_shadow_color, 0.0f, 1.0f);
-    ImGui::End();
+    if (debug)
+    {
+        ImGui::Begin("Clouds properties");
+        ImGui::SliderFloat("Step size", &cloud_properties.step_size, 0.5f, 3.f);
+        ImGui::SliderFloat("Coverage", &cloud_properties.coverage_multiplier, 0.0f, 1.0f);
+        ImGui::SliderFloat("Cloud speed", &cloud_properties.cloud_speed, 0.0f, 50.0f);
+        ImGui::SliderFloat("Density Factor", &cloud_properties.density_factor, 0.01f, 1.0f);
+        ImGui::SliderFloat("Texture Scale", &cloud_properties.texture_scale, 0.05f, 10.0f);
+        ImGui::SliderFloat("Weather Texture Scale", &cloud_properties.weather_texture_scale, 0.05f, 10.0f);
+        ImGui::SliderFloat("Sun power", &cloud_properties.sun_power, 0.0f, 200.0f);
+        ImGui::SliderFloat("Fog factor", &cloud_properties.fog_factor, 0.0f, 3.f);
+        ImGui::SliderFloat3("cloud Light color", (float*)&cloud_properties.cloud_light_color, 0.0f, 1.0f);
+        ImGui::SliderFloat3("Cloud Shadow Color", (float*)&cloud_properties.cloud_shadow_color, 0.0f, 1.0f);
+        ImGui::End();
+    }
 }
 
 void CloudBox::updateSun(glm::vec3 direction)

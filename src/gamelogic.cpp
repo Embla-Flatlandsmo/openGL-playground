@@ -37,6 +37,8 @@ enum KeyFrameAction {
     BOTTOM, TOP
 };
 
+bool toggleDebug = false;
+
 #include <timestamps.h>
 
 double padPositionX = 0;
@@ -116,6 +118,15 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
             case GLFW_KEY_J:
                 screen->decrementCurrentEffect();
                 break;
+            case GLFW_KEY_R:
+                particles->resetPositions();
+                break;
+            case GLFW_KEY_Y:
+                toggleDebug = !toggleDebug;
+                particles->setDebug(toggleDebug);
+                cloud->setDebug(toggleDebug);
+                break;
+
         }
     }
 }
@@ -169,7 +180,7 @@ void updateFrame(GLFWwindow* window) {
     double timeDelta = getTimeDeltaSeconds();
 
     camera->updateCamera(timeDelta);
-    glm::mat4 projection = glm::perspective(glm::radians(80.0f), float(windowWidth) / float(windowHeight), 0.1f, 350.f);
+    glm::mat4 projection = camera->getProjMatrix();
 
     glm::mat4 VP = projection * camera->getViewMatrix();
     particles->update();
@@ -240,31 +251,37 @@ void renderFrame(GLFWwindow* window) {
 }
 
 void renderUI(void) {
-    // ImGui::ShowDemoWindow
+
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
+    // ImGui::ShowDemoWindow();
 
-    ImGui::Begin("Boid properties");
-    ImGui::SliderFloat("Size", &(particles->boidProperties.size), 0.1f, 2.0f);
-    ImGui::SliderFloat("Cohesion", &(particles->boidProperties.cohesion_factor), 0.0f, 1.5f);
-    ImGui::SliderFloat("Alignment", &(particles->boidProperties.alignment_factor), 0.0f, 1.5f);
-    ImGui::SliderFloat("Separation", &(particles->boidProperties.separation_factor), 0.0f, 1.5f);
-    ImGui::SliderFloat("Separation Range", &(particles->boidProperties.separation_range), 0.0f, 3.0f); // Max is view range
-    ImGui::SliderFloat("Boundary avoidance", &(particles->boidProperties.boundary_avoidance_factor), 0.0f, 0.2f);
-    ImGui::SliderFloat("dt", &(particles->boidProperties.dt), 0.0f, 2.0);
-    ImGui::SliderFloat("Max velocity", &(particles->boidProperties.max_vel), 0.0f, 4.0f);
-    ImGui::Checkbox("Wrap around", &(particles->boidProperties.wrap_around));
-    ImGui::End();
+    const float DISTANCE = 10.0f;
+    ImVec2 diagnostics_window_pos = ImVec2(DISTANCE, DISTANCE);
+    ImVec2 diagnostics_window_pivot = ImVec2(0.0f, 0.0f);
+    // ImVec2 window_pos = ImVec2((corner & 1) ? windowWidth - DISTANCE : DISTANCE, (corner & 2) ? windowHeight - DISTANCE : DISTANCE);
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove;
+    // ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
+    ImGui::SetNextWindowPos(diagnostics_window_pos, ImGuiCond_Always, diagnostics_window_pivot);
+    ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
     
-    ImGui::Begin("Diagonstics");
+    ImGui::Begin("Diagonstics", NULL, window_flags);
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
                         1000.0f / ImGui::GetIO().Framerate,
                         ImGui::GetIO().Framerate);
+    ImGui::Separator();
+    ImGui::Text("Controls:\nCamera: WASDEQ, Arrows, N\nDebug: Y\nReset: R");
     ImGui::End();
 
-    cloud->renderUI();
+    if (toggleDebug)
+    {
+        particles->renderUI();
+        cloud->renderUI();
+        screen->renderUI();
+    }
+
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

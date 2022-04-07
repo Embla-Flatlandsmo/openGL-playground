@@ -26,13 +26,13 @@ struct acc
 
 struct particleProperties
 {
-    float size = 0.5;
-    float cohesion_factor = 0.01;
-    float separation_factor = 0.05;
+    float size = 0.1;
+    float cohesion_factor = 0.005;
+    float separation_factor = 0.4;
     float separation_range = 0.5;
-    float alignment_factor = 0.125;
+    float alignment_factor = 0.6;
     float boundary_avoidance_factor = 0.01;
-    float dt = 1.0;
+    float dt = 0.01;
     float max_vel = 0.3;
     bool wrap_around = true;
     float view_range = 3.0;
@@ -45,8 +45,10 @@ public:
     ~ParticleSystem();
     void update();
     void render(GLFWwindow *window, Gloom::Camera *camera);
-    void setDebugMode(bool debug);
-
+    void setDebug(bool enable);
+    // void setDebugMode(bool debug);
+    void resetPositions(void);
+    void renderUI(void);
     struct particleProperties boidProperties;
 
 private:
@@ -77,7 +79,7 @@ private:
 
     Mesh *particleModel;
 
-    bool debug = true;
+    bool debug = false;
 
     void initParticles();
     void countBucketSizes();

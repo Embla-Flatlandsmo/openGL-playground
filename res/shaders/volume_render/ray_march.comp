@@ -215,7 +215,7 @@ float sampleCloudDensity(vec3 rayPos, int lod)
   float cloud_coverage = weather_data.r*coverage_multiplier;
   float base_cloud_with_coverage = remap(base_cloud, cloud_coverage, 1.0, 0.0, 1.0);
   base_cloud_with_coverage *= cloud_coverage;
-  return base_cloud_with_coverage;
+  return clamp(base_cloud_with_coverage, 0.0, 1.0);
   // return base_cloud_with_coverage;
   // float base_cloud_with_coverage = base_cloud;
 	// return clamp(base_cloud_with_coverage, 0.0, 1.0);
