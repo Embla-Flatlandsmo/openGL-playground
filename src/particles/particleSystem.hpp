@@ -46,17 +46,18 @@ public:
     void update();
     void render(GLFWwindow *window, Gloom::Camera *camera);
     void setDebug(bool enable);
-    // void setDebugMode(bool debug);
     void resetPositions(void);
     void renderUI(void);
-    struct particleProperties boidProperties;
+
 
 private:
+
+    bool debug = false;
+    Mesh *particleModel;
+
     BoundingBox *boundingBox;
     GLuint particlePosSSBO;
-    GLuint particlePosSSBO_prev;
     GLuint particleVelSSBO;
-    GLuint particleVelSSBO_prev;
     GLuint particleAccSSBO;
     GLuint particleVAO;
 
@@ -64,9 +65,18 @@ private:
     struct vel *particleVels;
     struct acc *particleAccs;
 
-    Gloom::Shader *colorShader;
-    Gloom::Shader *computeShader;
+    struct particleProperties boidProperties;
+
+    Gloom::Shader *renderShader;
+    Gloom::Shader *integrationShader;
     Gloom::Shader *forceShader;
+
+    void initParticles();
+
+    // Necessities for grid-based
+    // neighbour check
+    GLuint particlePosSSBO_prev;
+    GLuint particleVelSSBO_prev;
 
     GLuint prefixSumsLoc;
     GLuint bucketSizesLoc;
@@ -77,11 +87,6 @@ private:
     Gloom::Shader *gridBucketsShader;
     Gloom::Shader *reindexShader;
 
-    Mesh *particleModel;
-
-    bool debug = false;
-
-    void initParticles();
     void countBucketSizes();
     void computePrefixSum();
     void computeReindexGrid();

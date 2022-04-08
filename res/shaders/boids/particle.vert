@@ -44,16 +44,6 @@ void main() {
 	frag_pos = VP*vec4(particleSize*rvert + pos.xyz, 1.0);
 	gl_Position = frag_pos;
 	world_space_pos = particleSize*rvert + pos.xyz;
-	// frag_pos = VP * vec4(particleSize*rvert + pos.xyz, 1.0);
-	// vec3 hotColor = vec3(0.5, 1.0, 0.8);
-	// vec3 coldColor = vec3(0.8, 0, 0.4);
-	// float pct= clamp(abs(acc.w), 0, 10)/10;
-	// vec3 colorVal = mix(coldColor, hotColor, pct);
-	//  colorVal = (clamp(colorValue, minColorValue, maxColorValue) - minColorValue) / max(1, (maxColorValue - minColorValue));
 	vert_color = rot*vec4(normal_in, 1.0);
-	// vert_color = VP*rot*vec4(normal_in, 1.0);
 	normal_out = normalize((rot*vec4(normal_in, 1.0)).xyz);
-	// vert_color = vec4(clamp(normalize(abs(vel.xyz)), vec3(0.2), vec3(1.0)), 1.0);
-	// normal_out = 
-	// vert_color = vec4(colorVal, 1.0);
 }

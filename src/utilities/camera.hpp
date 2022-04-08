@@ -148,6 +148,11 @@ namespace Gloom
             updateViewMatrix();
         }
 
+        void setMoveSpeed(float movement_speed)
+        {
+            cMovementSpeed = movement_speed;
+        }
+
     private:
         // Disable copying and assignment
         Camera(Camera const &) = delete;
@@ -187,7 +192,7 @@ namespace Gloom
         // Private member variables
 
         // Camera quaternion and frame pitch and yaw
-        glm::quat cQuaternion;
+        glm::quat cQuaternion = glm::quat(glm::vec3(0, 0, 0));
         GLfloat fPitch = 0.0f;
         GLfloat fYaw   = 0.0f;
 

@@ -20,13 +20,17 @@ Sky::~Sky()
     free(sky);
 }
 
-void Sky::render(Gloom::Camera *camera)
+void Sky::render()
+{
+    sky->render();
+}
+
+void Sky::update(Gloom::Camera *camera)
 {
     sky->screen_shader->activate();
     glUniformMatrix4fv(sky->screen_shader->getUniformFromName("view_mat"), 1, GL_FALSE, glm::value_ptr(camera->getViewMatrix()));
     glUniformMatrix4fv(sky->screen_shader->getUniformFromName("inv_proj"), 1, GL_FALSE, glm::value_ptr(glm::inverse(camera->getProjMatrix())));
     glUniformMatrix4fv(sky->screen_shader->getUniformFromName("inv_view"), 1, GL_FALSE, glm::value_ptr(glm::inverse(camera->getViewMatrix())));
-    sky->draw();
 }
 
 void Sky::renderUI(void)

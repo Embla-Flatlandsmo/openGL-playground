@@ -25,7 +25,7 @@ CloudBox::CloudBox(glm::vec3 low, glm::vec3 high)
     boxLow = low;
     boxHigh = high;
     rayMarchCloud = new Gloom::Shader();
-    rayMarchCloud->attach("../res/shaders/volume_render/ray_march.comp");
+    rayMarchCloud->attach("../res/shaders/cloud/ray_march.comp");
     rayMarchCloud->link();
     // screen = new ScreenQuad();
     renderCloud = new Gloom::Shader();
@@ -64,16 +64,12 @@ void CloudBox::setColorBuffer(GLuint textureID)
     rayMarchCloud->deactivate();
 }
 
-void CloudBox::render(Gloom::Camera *camera)
+void CloudBox::update(Gloom::Camera *camera)
 {
-
-
+    rayMarchCloud->activate();
     glm::mat4 projection = camera->getProjMatrix();
     glm::mat4 VP = projection * camera->getViewMatrix();
     glm::mat4 inverse_mvp = glm::inverse(VP);
-    // glm::vec3 camera_position = glm::vec3(camera->getViewMatrix()[3]);
-    
-    rayMarchCloud->activate();
     glUniform3fv(rayMarchCloud->getUniformFromName("AABBmin"), 1, glm::value_ptr(boxLow));
     glUniform3fv(rayMarchCloud->getUniformFromName("AABBmax"), 1, glm::value_ptr(boxHigh));
     glUniform3fv(rayMarchCloud->getUniformFromName("VolumeGridSize"), 1, glm::value_ptr(glm::vec3(128,128,128))); // Input to generateTexture3D in init
@@ -98,6 +94,15 @@ void CloudBox::render(Gloom::Camera *camera)
     glUniform3fv(rayMarchCloud->getUniformFromName("light_direction"), 1, glm::value_ptr(glm::normalize(glm::vec3(0.5, 1.0, 0.5))));
     glUniform3fv(rayMarchCloud->getUniformFromName("cloud_shadow_color"), 1, glm::value_ptr(cloud_properties.cloud_shadow_color));
     glUniform3fv(rayMarchCloud->getUniformFromName("cloud_light_color"), 1, glm::value_ptr(cloud_properties.cloud_light_color));
+    rayMarchCloud->deactivate();
+}
+
+void CloudBox::render(void)
+{
+    // glm::vec3 camera_position = glm::vec3(camera->getViewMatrix()[3]);
+    
+    rayMarchCloud->activate();
+
     // Set sampler 0
     glActiveTexture(GL_TEXTURE0);
 
@@ -109,41 +114,13 @@ void CloudBox::render(Gloom::Camera *camera)
     glBindTexture(GL_TEXTURE_2D, weatherTex);
     glUniform1i(rayMarchCloud->getUniformFromName("weather"), 1);
 
-    // // Set sampler 2
-    // glActiveTexture(GL_TEXTURE0+2);
-    // glBindTexture(GL_TEXTURE_2D, weatherTex);
-    // glUniform1i(rayMarchCloud->getUniformFromName("weather"), 2);
-    // glBindTextureUnit(GL_TEXTURE0, screen->texture);
-    // glBindImageTexture(
-    //     /*unit=*/0,
-    //     /*texture=*/screen->texture,
-    //     /*level=*/)
     glBindImageTexture(0, screen.color_texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
     glDispatchCompute(INT_CEIL(windowWidth,8), INT_CEIL(windowHeight,8), 1);
     glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
-    // glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindTexture(GL_TEXTURE_3D, 0);
     rayMarchCloud->deactivate();
-    screen.draw();
-    // renderCloud->activate();
-
-    // glUniformMatrix4fv(renderCloud->getUniformFromName("MVP"), 1, GL_FALSE, glm::value_ptr(VP));
-    // glUniform1f(renderCloud->getUniformFromName("iTime"), (float)glfwGetTime());
-    // glUniformMatrix4fv(renderCloud->getUniformFromName("inv_vp"), 1, false, glm::value_ptr(inverse_mvp));
-    // glUniformMatrix4fv(renderCloud->getUniformFromName("inv_view"), 1, false, glm::value_ptr(glm::inverse(camera->getViewMatrix())));
-    // glUniformMatrix4fv(renderCloud->getUniformFromName("inv_proj"), 1, false, glm::value_ptr(glm::inverse(projection)));
-    // glUniform3fv(renderCloud->getUniformFromName("cam_pos"), 1, glm::value_ptr(camera_position));
-    // glUniform4fv(renderCloud->getUniformFromName("viewport"), 1, glm::value_ptr(glm::vec4(0.0,0.0, windowWidth, windowHeight)));
-
-    // glActiveTexture(GL_TEXTURE0);
-    // glBindTextureUnit(GL_TEXTURE_3D, perlinTex);
-
-    // glActiveTexture(GL_TEXTURE1);
-    // glBindTextureUnit(GL_TEXTURE_3D, worley32);    
-    
-    // glBindVertexArray(vao);
-    // glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
+    screen.render();
 }
 
 void CloudBox::generateTextures()
@@ -182,10 +159,6 @@ void CloudBox::generateTextures()
     weather->attach("../res/shaders/cloud/weather.comp");
     weather->link();
     weatherTex = generateTexture2D(1024, 1024);
-    generateWeatherMap();
-}
-
-void CloudBox::generateWeatherMap() {
 	weather->activate();
 	// weather->setVec3("seed", 0);
 	// weather->setFloat("perlinFrequency", 2.0);

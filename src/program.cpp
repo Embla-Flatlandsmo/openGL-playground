@@ -1,21 +1,12 @@
 // Local headers
 #include "program.hpp"
-#include "utilities/window.hpp"
 #include "gamelogic.h"
-#include <glm/glm.hpp>
-// glm::translate, glm::rotate, glm::scale, glm::perspective
-#include <glm/gtc/matrix_transform.hpp>
-#include <iostream>
-#include <SFML/Audio.hpp>
-#include <SFML/System/Time.hpp>
-#include <utilities/shapes.h>
-#include <utilities/glutils.h>
-#include <utilities/shader.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <utilities/timeutils.h>
 
-
-void runProgram(GLFWwindow* window, CommandLineOptions options)
+/**
+ * @brief Handles OpenGL-specific settings and
+ *        runs the main loop.
+ */
+void runProgram(GLFWwindow* window)
 {
     glEnable(GL_DEBUG_OUTPUT);
     // Enable depth (Z) buffer (accept "closest" fragment)
@@ -37,7 +28,7 @@ void runProgram(GLFWwindow* window, CommandLineOptions options)
     // Set default colour after clearing the colour buffer
     glClearColor(0.0f,0.74902f, 1.0f, 1.0f);
 
-	initGame(window, options);
+	initGame(window);
 
     // Rendering Loop
     while (!glfwWindowShouldClose(window))

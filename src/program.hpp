@@ -7,11 +7,10 @@
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
 #include <string>
-#include <utilities/window.hpp>
 
 
 // Main OpenGL program
-void runProgram(GLFWwindow* window, CommandLineOptions options);
+void runProgram(GLFWwindow* window);
 
 
 // Function for handling keypresses

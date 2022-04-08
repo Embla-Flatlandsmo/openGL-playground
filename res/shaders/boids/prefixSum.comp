@@ -1,3 +1,6 @@
+// This shader is adapted from The OpenGL Superbible 
+// ISBN-13: 978-0-321-90294-8
+// Chapter 10 on "Compute Shader Parallel Prefix Sum"
 #version 430 
 
 layout( local_size_x = 1024, local_size_y = 1, local_size_z = 1 ) in;

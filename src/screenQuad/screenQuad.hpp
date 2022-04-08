@@ -28,21 +28,31 @@ class ScreenQuad
         ScreenQuad(QuadUsage usage);
         ScreenQuad(void); //TODO: this is messy
         ~ScreenQuad(void);
-        void draw(void);
+        /***/
+        void render(void);
         void bindFramebuffer(void);
         void unbindFramebuffer(void);
         void renderUI(void);
-        void incrementCurrentEffect(void);
-        void decrementCurrentEffect(void);
         GLuint color_texture;
         GLuint depth_texture;
         Gloom::Shader *screen_shader;
     private:
+        /**
+         * @brief VAO of the quad covering the screen
+         * 
+         */
         GLuint vao;
         GLuint fb;
+
+        /**
+         * @brief For sky usage, there is no depth texture
+         * 
+         */
         bool has_depth_texture = false;
 
-
+        /**
+         * @brief Post-processing effect to apply
+         */
         ScreenEffect current_effect = ScreenEffect::NORMAL;
 
         void initFramebuffer(void);

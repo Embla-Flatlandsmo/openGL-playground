@@ -1,22 +1,12 @@
 #version 430
 
 /**
-This code largely comes from https://www.shadertoy.com/view/3dVXDc
-with some minor modifications to make it work in a compute shader.
+This tab contains all the necessary noise functions required to model a cloud shape.
 */
 
-/*
-This shader fills a 3D texture with the following textures:
-r: perlin-worley
-g: worley, 1st octave (1xFrequency)
-b: worley, 2nd octave (2xFrequency)
-a: worley, 3rd octave (4xFrequency)
-*/
 layout (local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
 
-layout (rgba8, binding = 0) uniform image3D noiseTex;
-
-uniform float freq = 4.;
+layout (rgba8, binding = 0) uniform image3D outVolTex;
 
 // Hash by David_Hoskins
 #define UI0 1597334673U
@@ -131,27 +121,28 @@ float worleyFbm(vec3 p, float freq)
 }
 
 /**
-Write the tileable 3D noise to a texture. 
+This buffer writes the tileable 3D noise to a texture. 
 */
+
 void main()
 {
-    ivec3 pixel = ivec3(gl_GlobalInvocationID.xyz);
+    vec3 pixel = gl_GlobalInvocationID.xyz;
+	vec3 coord = vec3(float(pixel.x) / 128.0, float(pixel.y) / 128.0, float(pixel.z) / 128.0);
+    // vec2 uv = fragCoord / iResolution.xy;
+    // vec2 m = iMouse.xy / iResolution.xy;
 
     vec4 col = vec4(0.);
     
-	// number of layers of 3d texture
-	// note: this assumes dimensions in xyz are the same!
-	float slices = float(imageSize(noiseTex).x);
-    // float slices = 128.; // number of layers of the 3d texture
-    // float freq = 4.;
+    float slices = 128.; // number of layers of the 3d texture
+    float freq = 8.;
     
-    float pfbm= mix(1., perlinfbm(vec3(pixel.xy, floor(pixel.z*slices)/slices), 4., 7), .5);
+    float pfbm= mix(1., perlinfbm(coord, 4., 7), .5);
     pfbm = abs(pfbm * 2. - 1.); // billowy perlin noise
     
-    col.g += worleyFbm(vec3(pixel.xy, floor(pixel.z*slices)/slices), freq);
-    col.b += worleyFbm(vec3(pixel.xy, floor(pixel.z*slices)/slices), freq*2.);
-    col.a += worleyFbm(vec3(pixel.xy, floor(pixel.z*slices)/slices), freq*4.);
+    col.g += worleyFbm(coord, freq);
+    col.b += worleyFbm(coord, freq*2.);
+    col.a += worleyFbm(coord, freq*4.);
     col.r += remap(pfbm, 0., 1., col.g, 1.); // perlin-worley
     
-	imageStore(noiseTex, pixel, col);
+	imageStore (outVolTex, ivec3(pixel), col);
 }

@@ -215,13 +215,6 @@ void main() {
     currentParticleIndex = gid;
     boid_t current_boid = get_boid(currentParticleIndex);
 
-    // vec3 coh = cohesion(gid);
-    // vec3 sep = separation(gid);
-    // vec3 alig = alignment(gid);
-    // current_boid.acc = vec3(0.,0.,0.);
-    // current_boid.acc += coh+sep+alig;
-    // current_boid.acc += avoidBoundary(current_boid.pos)*boundary_avoidance_factor;
-
     uint cellID = getFlatCellIDfromPos(current_boid.pos);
     uvec3 boidCellPos = getCellIDfromPos(current_boid.pos);
     for (int zOffset = -1; zOffset <= 1; zOffset++) {
@@ -243,63 +236,5 @@ void main() {
         current_boid.acc += (separation_vector*separation_factor + (cohesion_vector*cohesion_factor + alignment_vector*alignment_factor)/num_in_range);
     }
 
-    /* Other grid-based approach: */
-    // uint cellID = getFlatCellIDfromPos(current_boid.pos);
-
-    // uint gridXY = gridRes.x * gridRes.y;
-    // uint z = cellID / gridXY;
-    // uint znext = (z + 1 + gridRes.z) % gridRes.z;
-    // uint zprev = (z - 1 + gridRes.z) % gridRes.z;
-    // uint tmpy = cellID - (z * gridXY);
-    // uint y = tmpy / gridRes.x;
-    // uint ynext = (y + 1 + gridRes.y) % gridRes.y;
-    // uint yprev = (y - 1 + gridRes.y) % gridRes.y;
-    // uint x = tmpy - y * gridRes.x;
-    // uint xnext = (x + 1 + gridRes.x) % gridRes.x;
-    // uint xprev = (x - 1 + gridRes.x) % gridRes.x;
-    
-    // flockInCell(xprev, yprev, zprev);
-    // flockInCell(x, yprev, zprev);
-    // flockInCell(xnext, yprev, zprev);
-
-    // flockInCell(xprev, y, zprev);
-    // flockInCell(x, y, zprev);
-    // flockInCell(xnext, y, zprev);
-
-    // flockInCell(xprev, ynext, zprev);
-    // flockInCell(x, ynext, zprev);
-    // flockInCell(xnext, ynext, zprev);
-
-    // flockInCell(xprev, yprev, z);
-    // flockInCell(x, yprev, z);
-    // flockInCell(xnext, yprev, z);
-
-    // flockInCell(xprev, y, z);
-    // flockInCell(x, y, z);
-    // flockInCell(xnext, y, z);
-
-    // flockInCell(xprev, ynext, z);
-    // flockInCell(x, ynext, z);
-    // flockInCell(xnext, ynext, z);
-
-    // flockInCell(xprev, yprev, znext);
-    // flockInCell(x, yprev, znext);
-    // flockInCell(xnext, yprev, znext);
-
-    // flockInCell(xprev, y, znext);
-    // flockInCell(x, y, znext);
-    // flockInCell(xnext, y, znext);
-
-    // flockInCell(xprev, ynext, znext);
-    // flockInCell(x, ynext, znext);
-    // flockInCell(xnext, ynext, znext);
-
-    // current_boid.acc = vec3(0.f,0.f,0.f);
-    // current_boid.acc = avoidBoundary(current_boid.pos)*boundary_avoidance_factor;
-    // if (num_in_range != 0) {
-    //     current_boid.acc += (separation_vector*separation_factor + (cohesion_vector*cohesion_factor + alignment_vector*alignment_factor)/num_in_range);
-    // }
-
     Accelerations[currentParticleIndex].xyz = current_boid.acc;
-    // Accelerations[currentParticleIndex].w = num_in_range;
 }

@@ -89,7 +89,7 @@ BoundingBox::BoundingBox(glm::vec3 low, glm::vec3 high, float cell_size)
     printf("GridRes: [%d, %d, %d]\n", resolution.x, resolution.y, resolution.z);
     numCells = this->resolution.x*this->resolution.y*this->resolution.z;
     boxShader = new Gloom::Shader();
-    boxShader->makeBasicShader("../res/shaders/box.vert", "../res/shaders/box.frag");
+    boxShader->makeBasicShader("../res/shaders/bounding_box.vert", "../res/shaders/bounding_box.frag");
     Mesh box = generateBoundingBoxMesh(high-low);
     boxVAO = generateBuffer(box);
 }

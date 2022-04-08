@@ -14,7 +14,8 @@ class Sky
     public:
         Sky();
         ~Sky();
-        void render(Gloom::Camera *camera);
+        void render(void);
+        void update(Gloom::Camera *camera);
         void renderUI(void);
     private:
         ScreenQuad* sky;

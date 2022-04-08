@@ -29,7 +29,8 @@ class CloudBox
     public:
         CloudBox(glm::vec3 low, glm::vec3 high);
         ~CloudBox();
-        void render(Gloom::Camera *camera);
+        void render(void);
+        void update(Gloom::Camera *camera);
         void renderUI(void);
         void setDepthBuffer(GLuint textureID);
         void setColorBuffer(GLuint textureID);

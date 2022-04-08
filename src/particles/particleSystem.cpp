@@ -30,21 +30,21 @@ ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
     particleVels = new struct vel[NUM_PARTICLES];
     particleAccs = new struct acc[NUM_PARTICLES];
 
-    colorShader = new Gloom::Shader();
-    colorShader->makeBasicShader("../res/shaders/boids/particle.vert", "../res/shaders/boids/particle.frag");
+    renderShader = new Gloom::Shader();
+    renderShader->makeBasicShader("../res/shaders/boids/particle.vert", "../res/shaders/boids/particle.frag");
 
     // The compute shader must be in its own program
-    computeShader = new Gloom::Shader();
-    computeShader->attach("../res/shaders/boids/particle.comp");
-    computeShader->link();
+    integrationShader = new Gloom::Shader();
+    integrationShader->attach("../res/shaders/boids/integrate.comp");
+    integrationShader->link();
 
     // We set the uniforms for the bounding box in the compute shader only once
-    computeShader->activate();
-    glUniform3fv(computeShader->getUniformFromName("boundingBoxLow"), 1, glm::value_ptr(boundingBox->low));
-    glUniform3fv(computeShader->getUniformFromName("boundingBoxHigh"), 1, glm::value_ptr(boundingBox->high));
-    glUniform1i(computeShader->getUniformFromName("numBoids"), NUM_PARTICLES);
-    glUniform3uiv(computeShader->getUniformFromName("gridRes"), 1, glm::value_ptr(boundingBox->resolution));
-    computeShader->deactivate();
+    integrationShader->activate();
+    glUniform3fv(integrationShader->getUniformFromName("boundingBoxLow"), 1, glm::value_ptr(boundingBox->low));
+    glUniform3fv(integrationShader->getUniformFromName("boundingBoxHigh"), 1, glm::value_ptr(boundingBox->high));
+    glUniform1i(integrationShader->getUniformFromName("numBoids"), NUM_PARTICLES);
+    glUniform3uiv(integrationShader->getUniformFromName("gridRes"), 1, glm::value_ptr(boundingBox->resolution));
+    integrationShader->deactivate();
 
     forceShader = new Gloom::Shader();
     forceShader->attach("../res/shaders/boids/computeForce.comp");
@@ -66,8 +66,8 @@ ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
 ParticleSystem::~ParticleSystem()
 {
     // Some cleanup here is probably needed...
-    computeShader->destroy();
-    colorShader->destroy();
+    integrationShader->destroy();
+    renderShader->destroy();
 }
 
 void ParticleSystem::update()
@@ -96,10 +96,10 @@ void ParticleSystem::update()
     forceShader->deactivate();
     // printf("Force update time: %f\n", getTimeDeltaSeconds());
 
-    computeShader->activate();
-    glUniform1f(computeShader->getUniformFromName("DT"), boidProperties.dt);
-    glUniform1f(computeShader->getUniformFromName("max_vel"), boidProperties.max_vel);
-    glUniform1i(computeShader->getUniformFromName("wrap_around"), boidProperties.wrap_around);
+    integrationShader->activate();
+    glUniform1f(integrationShader->getUniformFromName("DT"), boidProperties.dt);
+    glUniform1f(integrationShader->getUniformFromName("max_vel"), boidProperties.max_vel);
+    glUniform1i(integrationShader->getUniformFromName("wrap_around"), boidProperties.wrap_around);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particlePosSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, particleVelSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, particleAccSSBO);
@@ -109,7 +109,7 @@ void ParticleSystem::update()
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, particleVelSSBO_prev);  
     glDispatchCompute(ceil(float(NUM_PARTICLES)/WORK_GROUP_SIZE), 1, 1);
     glMemoryBarrier(GL_ALL_BARRIER_BITS);
-    computeShader->deactivate();
+    integrationShader->deactivate();
     // printf("Physics update time: %f\n", getTimeDeltaSeconds());
 }
 
@@ -133,15 +133,15 @@ void ParticleSystem::render(GLFWwindow *window, Gloom::Camera *camera)
     {
         boundingBox->renderAsWireframe(window, camera);
     }
-    colorShader->activate();
-    glUniform1f(colorShader->getUniformFromName("particleSize"), boidProperties.size);
-    glUniformMatrix4fv(colorShader->getUniformFromName("VP"), 1, GL_FALSE, glm::value_ptr(VP));
-    glUniform3fv(colorShader->getUniformFromName("camera_pos"), 1, glm::value_ptr(glm::vec3(camera->getViewMatrix()[3])));
+    renderShader->activate();
+    glUniform1f(renderShader->getUniformFromName("particleSize"), boidProperties.size);
+    glUniformMatrix4fv(renderShader->getUniformFromName("VP"), 1, GL_FALSE, glm::value_ptr(VP));
+    glUniform3fv(renderShader->getUniformFromName("camera_pos"), 1, glm::value_ptr(glm::vec3(camera->getViewMatrix()[3])));
     glBindVertexArray(particleVAO);
     // Finally we draw the particles
     // glDrawArrays(GL_POINTS, 0, NUM_PARTICLES);
     glDrawElementsInstanced(GL_TRIANGLES, particleModel->indices.size(), GL_UNSIGNED_INT, (void *)0, NUM_PARTICLES);
-    colorShader->deactivate();
+    renderShader->deactivate();
 }
 
 void ParticleSystem::setDebug(bool enable)
@@ -174,7 +174,7 @@ void ParticleSystem::renderUI(void)
  */
 void ParticleSystem::initParticles()
 {
-    colorShader->activate();
+    renderShader->activate();
     GLint bufMask = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
 
     particleVAO = generateBuffer(*particleModel);
