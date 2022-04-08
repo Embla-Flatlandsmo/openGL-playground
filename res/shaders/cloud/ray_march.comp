@@ -10,28 +10,20 @@ https://github.com/fede-vaccaro/TerrainEngine-OpenGL/blob/e5a2b756fff6dd6f825713
 
 
 layout(binding=0) uniform sampler3D perlinWorley; 
-// Weather contains [coverage, cloud type, 0, 1]
-layout(binding=1) uniform sampler2D weather;
 layout(binding=2) uniform sampler2D depth;
 layout(binding=3) uniform sampler2D frag_color;
 
-uniform vec3 VolumeGridSize;
 uniform vec3 AABBmin;
 uniform vec3 AABBmax;
 
-uniform float StepSize;
+uniform float light_step_size;
 uniform float time;
 
-
-uniform mat4 inv_vp;
 uniform mat4 inv_view;
 uniform mat4 inv_proj;
-uniform mat4 proj;
-uniform mat4 vp;
 uniform vec4 viewport;
 
 //=============== CLOUD UNIFORMS ===============//
-uniform float coverage_multiplier = 0.4;
 uniform float density_factor = 0.2;
 uniform float texture_scale = 1.0;
 uniform float weather_texture_scale = 1.0;
@@ -42,13 +34,8 @@ uniform vec3 cloud_light_color = vec3(1.0,0.6,0.3);
 uniform vec3 fog_color = vec3(183, 237, 255)/255.0;
 
 //=============== LIGHT UNIFORMS ===============//
-uniform vec3 light_color = vec3(1.0);
 uniform vec3 sun_direction = normalize(vec3(0.5, 0.5, 0.0));
 uniform float sun_power = 200.0;
-
-//=============== ENVIRONMENT UNIFORMS ===============//
-// uniform float near = 0.1;
-// uniform float far = 350.0;
 
 
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
@@ -62,6 +49,16 @@ float remap(float original_value, float original_min, float original_max, float 
 {
     return (((original_value - original_min) / (original_max - original_min)) * (new_max - new_min)) + new_min;
 }
+
+#define BAYER_FACTOR 5.0/16.0
+uniform float bayerFilter[16u] = float[]
+(
+	0.0*BAYER_FACTOR, 8.0*BAYER_FACTOR, 2.0*BAYER_FACTOR, 10.0*BAYER_FACTOR,
+	12.0*BAYER_FACTOR, 4.0*BAYER_FACTOR, 14.0*BAYER_FACTOR, 6.0*BAYER_FACTOR,
+	3.0*BAYER_FACTOR, 11.0*BAYER_FACTOR, 1.0*BAYER_FACTOR, 9.0*BAYER_FACTOR,
+	15.0*BAYER_FACTOR, 7.0*BAYER_FACTOR, 13.0*BAYER_FACTOR, 5.0*BAYER_FACTOR
+);
+
 
 struct Ray {
   vec3 origin;
@@ -167,12 +164,13 @@ float getHeightFractionForPoint(vec3 position)
   return clamp(height_fraction, 0.0, 1.0);
 }
 
-float getDensityForCloud(float heightFraction, float cloudType)
+float getDensityForCloud(float heightFraction)
 {
   return clamp(smoothstep(1.0, -0.5, heightFraction), 0.0, 0.9);
 }
 
 /*
+From GPU pro 7:
 1. The first step is to retrieve the four low-frequency noise values required
    to build a basic cloud shape. We sample the first 3D texture, containing
    low-frequency octaves.
@@ -195,153 +193,40 @@ float getDensityForCloud(float heightFraction, float cloudType)
 const vec3 windDirection = (vec3(1.0, 0.0, 0.0));
 float sampleCloudDensity(vec3 rayPos, int lod)
 {
-  vec3 uvw = uvwFromWorldPos(rayPos);
+  vec3 uvw = uvwFromWorldPos(rayPos*texture_scale);
   float height_fraction = getHeightFractionForPoint(rayPos); 
   // if (height_fraction < 0.0 || height_fraction > 1.0) return 0.0;
 	// vec3 animation = height_fraction * windDirection * CLOUD_TOP_OFFSET + windDirection * time * cloud_speed;
   vec3 animation = height_fraction*windDirection*CLOUD_TOP_OFFSET + (windDirection + vec3(0.0, 0.1, 0.0))*time*cloud_speed;
-  vec3 moving_uvw = uvwFromWorldPos(rayPos+animation);
+  vec3 moving_uvw = uvwFromWorldPos((rayPos+animation)*weather_texture_scale);
   // Original sample had low frequency noise as a 32x32x32 texture
   // int level_of_detail = int(texture_size.x/32);
   // int lod = 128/32;
 
   // We read the low-frequency Perlin-Worley and Worley noises
-  vec4 low_frequency_noises = textureLod(perlinWorley, uvw*texture_scale, lod); 
+  vec4 low_frequency_noises = textureLod(perlinWorley, uvw, lod); 
 
   // Build FBM out of the low frequency noises:
   float low_freq_fbm = (low_frequency_noises.g * 0.625)
                        + (low_frequency_noises.b * 0.25)
                        + (low_frequency_noises.a * 0.125);
+            
   // Define the base cloud shape by dilating it with the low-frequency FBM made of worley noise:
   float base_cloud = remap(low_frequency_noises.r, -(1.0-low_freq_fbm), 1.0, 0.0, 1.0);
-	float density_height_gradient = getDensityForCloud(height_fraction, 1.0);
-	// base_cloud *= (density_height_gradient/height_fraction);
+	float density_height_gradient = getDensityForCloud(height_fraction);
   base_cloud *= density_height_gradient;
-  // return base_cloud;
 
-  vec4 weather_data = textureLod(weather, weather_texture_scale*moving_uvw.xz, 4); // We use uvw.xz because we want weather to be applied in horizontal xz plane
-  // Remember! Cloud coverage is stored in weather's red channel:
-  float cloud_coverage = weather_data.r*coverage_multiplier;
+
+  vec4 weather_data = textureLod(perlinWorley, vec3(moving_uvw.x, 0.2, moving_uvw.z), 4);
+  float cloud_coverage = weather_data.a;
+
   float base_cloud_with_coverage = remap(base_cloud, cloud_coverage, 1.0, 0.0, 1.0);
   base_cloud_with_coverage *= cloud_coverage;
   return clamp(base_cloud_with_coverage, 0.0, 1.0);
-  // return base_cloud_with_coverage;
-  // float base_cloud_with_coverage = base_cloud;
-	// return clamp(base_cloud_with_coverage, 0.0, 1.0);
-  // if (expensive)
-  vec3 high_frequency_noises = textureLod(perlinWorley, moving_uvw*texture_scale, 0).gba; // Only get worley parts
-  float high_freq_fbm = (high_frequency_noises[0]*0.625)
-                        + (high_frequency_noises[1] * 0.25)
-                        + (high_frequency_noises[2] * 0.125);
-  
-
-  // Transition from wispy shapes to billowy shapes over height
-  float high_freq_noise_modifier = mix(high_freq_fbm, 1.0-high_freq_fbm, clamp(height_fraction*10.0, 0.0, 1.0));
-
-  // Erode the base cloud shape with the distorted high-frequency worley noises
-  // base_cloud_with_coverage = base_cloud_with_coverage - high_freq_noise_modifier * (1.0 - base_cloud_with_coverage);
-  // base_cloud_with_coverage = remap(base_cloud_with_coverage*2.0, high_freq_noise_modifier * 0.2, 1.0, 0.0, 1.0);
-  return base_cloud_with_coverage;
-  // return base_cloud_with_coverage;
-  // float final_cloud = remap(base_cloud_with_coverage, high_freq_noise_modifier*0.2, 1.0, 0.0, 1.0);
-  // return final_cloud;
-  return clamp(base_cloud_with_coverage, 0.0, 1.0);
 }
 
-float get_light(vec3 rayPos, int lod)
-{
-  vec3 uvw = uvwFromWorldPos(rayPos);
-  float height_fraction = getHeightFractionForPoint(rayPos); 
-  // if (height_fraction < 0.0 || height_fraction > 1.0) return 0.0;
-	// vec3 animation = height_fraction * windDirection * CLOUD_TOP_OFFSET + windDirection * time * cloud_speed;
-  vec3 animation = height_fraction*windDirection*CLOUD_TOP_OFFSET + (windDirection + vec3(0.0, 0.1, 0.0))*time*cloud_speed;
-  vec3 moving_uvw = uvwFromWorldPos(rayPos+animation);
-  // Original sample had low frequency noise as a 32x32x32 texture
-  // int level_of_detail = int(texture_size.x/32);
-  // int lod = 128/32;
 
-  // We read the low-frequency Perlin-Worley and Worley noises
-  vec4 low_frequency_noises = textureLod(perlinWorley, uvw*texture_scale, 0); 
-
-  // Build FBM out of the low frequency noises:
-  float low_freq_fbm = (low_frequency_noises.g * 0.625)
-                       + (low_frequency_noises.b * 0.25)
-                       + (low_frequency_noises.a * 0.125);
-  // Define the base cloud shape by dilating it with the low-frequency FBM made of worley noise:
-  float base_cloud = remap(low_frequency_noises.r, -(1.0-low_freq_fbm), 1.0, 0.0, 1.0);
-	float density_height_gradient = getDensityForCloud(height_fraction, 1.0);
-	// base_cloud *= (density_height_gradient/height_fraction);
-  base_cloud *= density_height_gradient;
-
-  // return base_cloud;
-  vec4 weather_data = textureLod(weather, weather_texture_scale*moving_uvw.xz, 0); // We use uvw.xz because we want weather to be applied in horizontal xz plane
-  // Remember! Cloud coverage is stored in weather's red channel:
-  float cloud_coverage = weather_data.r*coverage_multiplier*density_height_gradient;
-  // return cloud_coverage;
-  // return clamp(mix(base_cloud, cloud_coverage, 0.0), 0.0, 1.0);
-  
-  base_cloud = mix(base_cloud, cloud_coverage, 0.8);
-  return base_cloud;
-  // base_cloud *= (1.0-density_height_gradient);
-  float base_cloud_with_coverage = remap(base_cloud, cloud_coverage, 1.0, 0.0, 1.0);
-  base_cloud_with_coverage *= cloud_coverage;
-  // float base_cloud
-  // float base_cloud_with_coverage = base_cloud*cloud_coverage;
-  
-
-  base_cloud = mix(base_cloud, base_cloud_with_coverage, 1.0);
-
-
-  return clamp(base_cloud, 0.0, 1.0);
-  // return base_cloud;
-}
-
-float noise(vec3 x)
-{
-  vec3 p = floor(x);
-  vec3 f = fract(x);
-	f = f*f*(3.0-2.0*f);
-  x = p + f;
-  return textureLod(perlinWorley,(x+0.5)/128.0,0.0).x*2.0-1.0;
-}
-
-#define USE_LOD 0
-
-float map(vec3 rayPos, int oct)
-{
-  vec3 uvw = uvwFromWorldPos(rayPos);
-  float height_fraction = getHeightFractionForPoint(rayPos); 
-  if (height_fraction < 0.0 || height_fraction > 1.0) return 0.0;
-	// vec3 animation = height_fraction * windDirection * CLOUD_TOP_OFFSET + windDirection * time * cloud_speed;
-  vec3 animation = height_fraction*windDirection*CLOUD_TOP_OFFSET + (windDirection + vec3(0.0, 0.1, 0.0))*time*cloud_speed;
-  vec3 q = uvwFromWorldPos(rayPos+animation);
-
-  float g = 0.5+0.5*noise( q*0.3 );
-    
-	float f;
-    f  = 0.50000*noise( q ); q = q*2.02;
-    #if USE_LOD==1
-    if( oct>=2 ) 
-    #endif
-    f += 0.25000*noise( q ); q = q*2.23;
-    #if USE_LOD==1
-    if( oct>=3 )
-    #endif
-    f += 0.12500*noise( q ); q = q*2.41;
-    #if USE_LOD==1
-    if( oct>=4 )
-    #endif
-    f += 0.06250*noise( q ); q = q*2.62;
-    #if USE_LOD==1
-    if( oct>=5 )
-    #endif
-    f += 0.03125*noise( q ); 
-    
-    f = mix( f*0.1-0.75, f, g*g ) + 0.1;
-    return 1.5*f - 0.5 - rayPos.y;
-
-}
-
+//=============== RAYMARCH & MAIN ===============//
 vec4 raymarchCloud(Ray ray_world, Ray ray_viewspace, float tnear, float tfar, vec3 view_space_obstacle)
 {
   vec3 color = vec3(0.0);
@@ -354,41 +239,31 @@ vec4 raymarchCloud(Ray ray_world, Ray ray_viewspace, float tnear, float tfar, ve
   float dt = (tfar-t)/float(RAYMARCH_STEPS);
   for (int i = 0; i < RAYMARCH_STEPS; i++)
   {
-    float density = sampleCloudDensity(pos, 0);
+    float density = sampleCloudDensity(pos, 0)*density_factor;
     if (density > 0.01)
     {
+      // The lighting calculations are based off Inigo Quilez clouds: https://www.shadertoy.com/view/XslGRr
 
       // Find directional derivative
-      // float dif = clamp((density-sampleCloudDensity(pos+StepSize*sundir, 0))/StepSize, 0.0, 1.0);
-      // float dif = clamp((sampleCloudDensity(pos-3.0*sundir, 8)-density)/3.0, 0.0, 1.0);
-      // float dif = clamp((get_light(pos-StepSize*sun_direction,0)-get_light(pos,0))/StepSize, 0.0, 1.0);
-      float dif = clamp((get_light(pos, 0)-get_light(pos+StepSize*sun_direction, 0))/StepSize, 0.0, 1.0);
-      
-      // float dif = clamp((density-sampleCloudDensity(pos+StepSize*sundir, 8))/StepSize, 0.0, 1.0);
-      // Does the light taper off because out of range BB?
-      // dif = remap(log(dif+1.0), 0.0, 1.0, 0.0, 5.0); 
-      // vec3  lin = vec3(0.65,0.65,0.75)*1.1 + 0.8*vec3(1.0,0.6,0.3)*dif*sun_power;
+      float light_directional_derivative = sampleCloudDensity(pos+light_step_size*sun_direction, 0)*density_factor;
+      float dif = clamp((density-light_directional_derivative)/light_step_size, 0.0, 1.0);
+
       vec3 lin = cloud_shadow_color*1.1 + 0.8*cloud_light_color*dif*sun_power;
-      // vec3 lin = vec3(1.0);
-      // vec4  col = vec4( mix( vec3(1.0,0.95,0.8), vec3(0.25,0.3,0.35), density ), density );
       vec4 col = vec4(mix(vec3(1.0), vec3(0.0), density), density);
       col.xyz *= lin;
-      // col.xyz *= smoothstep(vec3(0.0), lin, sun_power/200.0);
-      // fog
       col.xyz = mix(col.xyz,fog_color, 1.0-exp2(-fog_factor*(t/100.0)));
+
       // composite front to back
       col.a    = min(col.a*8.0*dt,1.0);
       col.rgb *= col.a;
       sum += col*(1.0-sum.a);
     }
-    // Front-to-back compositing
-    // dst.a += (1.0-dst.a)*density_sample*density_factor;
     vec3 ray_viewspace_position = ray_viewspace.origin + ray_viewspace.dir*t;
     if (t > tfar) break;
     if (ray_viewspace_position.z <= view_space_obstacle.z) break; // TODO: Figure out how to integrate until exact t value
     if (sum.a > 0.99)
     {
-      // sum.a = 1.0;
+      sum.a = 1.0;
       break;
     }
     t += dt;
@@ -397,15 +272,6 @@ vec4 raymarchCloud(Ray ray_world, Ray ray_viewspace, float tnear, float tfar, ve
 
   return clamp(sum, 0.0, 1.0);
 }
-
-#define BAYER_FACTOR 5.0/16.0
-uniform float bayerFilter[16u] = float[]
-(
-	0.0*BAYER_FACTOR, 8.0*BAYER_FACTOR, 2.0*BAYER_FACTOR, 10.0*BAYER_FACTOR,
-	12.0*BAYER_FACTOR, 4.0*BAYER_FACTOR, 14.0*BAYER_FACTOR, 6.0*BAYER_FACTOR,
-	3.0*BAYER_FACTOR, 11.0*BAYER_FACTOR, 1.0*BAYER_FACTOR, 9.0*BAYER_FACTOR,
-	15.0*BAYER_FACTOR, 7.0*BAYER_FACTOR, 13.0*BAYER_FACTOR, 5.0*BAYER_FACTOR
-);
 
 void main()
 {
@@ -441,20 +307,16 @@ void main()
   bool hit = RayAABBIntersection(ray_world, AABBmin, AABBmax, tnear, tfar);
 	int a = int(fragCoord.x) % 4;
 	int b = int(fragCoord.y) % 4;
-	// tnear += 0.1*(tfar-tnear)*bayerFilter[a * 4 + b];
   tnear += bayerFilter[a*4+b];
   // Boid position (if there is one) in view space:
   vec3 view_space_obstacle = VSPositionFromDepth(fragCoordToUV(fragCoord));
 
   vec4 dst = texture(frag_color, fragCoordToUV(fragCoord));
   dst.a = 1.0;
-  // vec4 dst = vec4(vec3(1.0),1.0);
-  // vec4 dst = vec4(0.0,0.74902, 1.0, 1.0);
   if (hit)
   {
     vec4 res = raymarchCloud(ray_world, ray_viewspace, tnear, tfar, view_space_obstacle);
     dst.xyz = dst.xyz*(1.0-res.a) + res.xyz;
   }
-  // dst = smoothstep(0.15,1.1,dst);
   imageStore(OutputFrag, fragCoord, dst);
 }

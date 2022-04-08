@@ -110,7 +110,6 @@ void ParticleSystem::update()
     glDispatchCompute(ceil(float(NUM_PARTICLES)/WORK_GROUP_SIZE), 1, 1);
     glMemoryBarrier(GL_ALL_BARRIER_BITS);
     integrationShader->deactivate();
-    // printf("Physics update time: %f\n", getTimeDeltaSeconds());
 }
 
 /**
@@ -134,7 +133,9 @@ void ParticleSystem::render(GLFWwindow *window, Gloom::Camera *camera)
         boundingBox->renderAsWireframe(window, camera);
     }
     renderShader->activate();
-    glUniform1f(renderShader->getUniformFromName("particleSize"), boidProperties.size);
+    // Update uniforms
+    glUniform1f(renderShader->getUniformFromName("particle_size"), boidProperties.size);
+    glUniform1f(renderShader->getUniformFromName("fog_factor"), boidProperties.fog_factor);
     glUniformMatrix4fv(renderShader->getUniformFromName("VP"), 1, GL_FALSE, glm::value_ptr(VP));
     glUniform3fv(renderShader->getUniformFromName("camera_pos"), 1, glm::value_ptr(glm::vec3(camera->getViewMatrix()[3])));
     glBindVertexArray(particleVAO);
@@ -154,7 +155,6 @@ void ParticleSystem::renderUI(void)
     if (debug)
     {
         ImGui::Begin("Boid properties");
-        ImGui::SliderFloat("Size", &boidProperties.size, 0.01f, 0.3f);
         ImGui::SliderFloat("Cohesion", &boidProperties.cohesion_factor, 0.0f, 1.5f);
         ImGui::SliderFloat("Alignment", &boidProperties.alignment_factor, 0.0f, 1.5f);
         ImGui::SliderFloat("Separation", &boidProperties.separation_factor, 0.0f, 1.5f);
@@ -163,6 +163,10 @@ void ParticleSystem::renderUI(void)
         ImGui::SliderFloat("dt", &boidProperties.dt, 0.0f, 2.0);
         ImGui::SliderFloat("Max velocity", &boidProperties.max_vel, 0.0f, 4.0f);
         ImGui::Checkbox("Wrap around", &boidProperties.wrap_around);
+        ImGui::Separator();
+
+        ImGui::SliderFloat("Size", &boidProperties.size, 0.01f, 0.3f);
+        ImGui::SliderFloat("fog_factor", &boidProperties.fog_factor, 0.0f, 0.03f);
         ImGui::End();
     }
 }

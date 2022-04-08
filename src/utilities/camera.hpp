@@ -137,7 +137,6 @@ namespace Gloom
                 fYaw -= 2.0;
             if (keysInUse[GLFW_KEY_N]) // Neutral rotation
                 cQuaternion = glm::quat(glm::vec3(0, 0, 0));
-
             // Trick to balance PC speed with movement
             GLfloat velocity = cMovementSpeed * deltaTime;
 

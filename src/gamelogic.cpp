@@ -86,8 +86,12 @@ void initGame(GLFWwindow* window) {
     camera->setMoveSpeed(move_speed_normal);
     sky = new Sky();
 
-    cloud = new CloudBox(glm::vec3(-150.,-20.,-150.), glm::vec3(150., 50., 150.)); // Why is it multiplied by 10?
-    particles = new ParticleSystem(glm::vec3(10.,10.,10.), glm::vec3(40., 40., 40.));
+    // cloud = new CloudBox(glm::vec3(-150.,-20.,-150.), glm::vec3(150., 50., 150.)); // Why is it multiplied by 10?
+    // cloud = new CloudBox(glm::vec3(-100.,-20.,-100.), glm::vec3(100., 40., 100.)); // Why is it multiplied by 10?
+    cloud = new CloudBox(glm::vec3(-100,-100,-100), glm::vec3(150,150,150));
+    // particles = new ParticleSystem(glm::vec3(-20.,-20.,-20.), glm::vec3(20., 20., 20.));
+    // If the box contains (0,0,0), the boids always try to go for the edge for some reason..
+    particles = new ParticleSystem(glm::vec3(10.,10.,10.), glm::vec3(40., 40., 40.)); 
 
     getTimeDeltaSeconds();
 
@@ -143,6 +147,7 @@ void renderUI(void) {
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
                         1000.0f / ImGui::GetIO().Framerate,
                         ImGui::GetIO().Framerate);
+    ImGui::Text("Number of Boids: %i", NUM_PARTICLES);
     ImGui::Separator();
     ImGui::Text("Controls:\nCamera: WASDEQ, Arrows, N\nDebug: Y\nReset: R");
     ImGui::End();

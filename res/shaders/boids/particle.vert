@@ -1,7 +1,7 @@
 #version 430 core
 
 uniform layout(location = 1) mat4 VP;
-uniform layout(location = 2) float particleSize;
+uniform layout(location = 2) float particle_size;
 
 in layout (location = 0) vec3 vert;
 in layout (location = 1) vec3 normal_in;
@@ -41,9 +41,9 @@ mat4 getRotationMat(vec3 vector)
 void main() {
 	mat4 rot = getRotationMat(vel.xyz);
 	vec3 rvert = vec3(rot * vec4(vert.xyz, 1.0f));
-	frag_pos = VP*vec4(particleSize*rvert + pos.xyz, 1.0);
+	frag_pos = VP*vec4(particle_size*rvert + pos.xyz, 1.0);
 	gl_Position = frag_pos;
-	world_space_pos = particleSize*rvert + pos.xyz;
+	world_space_pos = particle_size*rvert + pos.xyz;
 	vert_color = rot*vec4(normal_in, 1.0);
 	normal_out = normalize((rot*vec4(normal_in, 1.0)).xyz);
 }

@@ -26,7 +26,7 @@ struct acc
 
 struct particleProperties
 {
-    float size = 0.1;
+    float size = 0.05;
     float cohesion_factor = 0.005;
     float separation_factor = 0.4;
     float separation_range = 0.5;
@@ -36,6 +36,8 @@ struct particleProperties
     float max_vel = 0.3;
     bool wrap_around = true;
     float view_range = 3.0;
+
+    float fog_factor = 0.01;
 };
 
 class ParticleSystem

@@ -11,14 +11,13 @@
 
 struct cloudProperties
 {
-    float step_size = 3.0f;
-    float coverage_multiplier = 1.0f;
-    float texture_scale = 2.0f;
-    float weather_texture_scale = 0.03f;
+    float light_step_size = 3.0f;
+    float texture_scale = 2.1f;
+    float weather_texture_scale = 1.5f;
     float cloud_speed = 10.0f;
     float density_factor = 1.0f;
-    float sun_power = 30.0f;
-    float fog_factor = 0.75f;
+    float sun_power = 190.0f;
+    float fog_factor = 1.0f;
 
     glm::vec3 cloud_shadow_color = glm::vec3(0.65,0.65,0.75);
     glm::vec3 cloud_light_color =  glm::vec3(1.0,0.6,0.3);
@@ -38,7 +37,6 @@ class CloudBox
         void setDebug(bool enable);
     private:
         void generateTextures();
-        void generateWeatherMap();
         GLuint vao = -1;
 
         ScreenQuad screen = ScreenQuad(false);
@@ -46,16 +44,11 @@ class CloudBox
         glm::vec3 boxLow;
         glm::vec3 boxHigh;
 
-        Gloom::Shader* renderCloud;
         Gloom::Shader* rayMarchCloud;
 
         Gloom::Shader* perlinWorley;
-        Gloom::Shader* worley;
-        Gloom::Shader* weather;
 
         GLuint perlinTex = 0;
-        GLuint worley32 = 0;
-        GLuint weatherTex = 0;
 
         bool debug = false;
         struct cloudProperties cloud_properties;
