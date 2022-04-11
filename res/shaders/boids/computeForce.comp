@@ -34,12 +34,6 @@ uniform float separation_factor;
 uniform float alignment_factor;
 uniform float boundary_avoidance_factor; 
 uniform float view_range; 
-// const float cohesion_factor = 0.01;
-// const float separation_range = 1.0;
-// const float separation_factor = 1.0;
-// const float alignment_factor = 0.125;
-// const float boundary_avoidance_factor = 0.01;
-// const float view_range = 3.0;
 vec3 separation_vector = vec3(0.f);
 vec3 alignment_vector = vec3(0.f);
 vec3 cohesion_vector = vec3(0.f);
@@ -148,10 +142,8 @@ uint flattenCellID(uint x, uint y, uint z) {
 
 uvec3 getCellIDfromPos(vec3 pos)
 {
-    // vec3 diagonal = boundingBoxHigh-boundingBoxLow;
     vec3 range = diagonal/gridRes;
     return uvec3((pos-boundingBoxLow)/range);
-    // return flattenCellID(vgridIdx.x, vgridIdx.y, vgridIdx.z);
 }
 
 uint getFlatCellIDfromPos(vec3 pos) {
@@ -233,7 +225,7 @@ void main() {
     current_boid.acc = vec3(0.f,0.f,0.f);
     current_boid.acc = avoidBoundary(current_boid.pos)*boundary_avoidance_factor;
     if (num_in_range != 0) {
-        current_boid.acc += (separation_vector*separation_factor + (cohesion_vector*cohesion_factor + alignment_vector*alignment_factor)/num_in_range);
+        current_boid.acc += (separation_vector*separation_factor + (cohesion_vector*cohesion_factor/num_in_range + alignment_vector*alignment_factor)/num_in_range);
     }
 
     Accelerations[currentParticleIndex].xyz = current_boid.acc;

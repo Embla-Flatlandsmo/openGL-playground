@@ -19,6 +19,7 @@
 #include "utilities/imgui/imgui_impl_opengl3.h"
 
 #define WORK_GROUP_SIZE 1024
+#define INT_CEIL(n,d) (int)ceil((float)n/d)
 
 ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
 {
@@ -45,6 +46,15 @@ ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
     glUniform1i(integrationShader->getUniformFromName("numBoids"), NUM_PARTICLES);
     glUniform3uiv(integrationShader->getUniformFromName("gridRes"), 1, glm::value_ptr(boundingBox->resolution));
     integrationShader->deactivate();
+    // /* For debugging :) */
+    // uint32_t arraySize = sizeof(GLuint)*(NUM_PARTICLES);
+    // glBindBuffer(GL_SHADER_STORAGE_BUFFER, particlePosSSBO);
+    // GLuint* sizes = (GLuint*)glMapNamedBufferRange(particlePosSSBO, 0, arraySize, GL_MAP_READ_BIT);
+    // memcpy(particlePoints, sizes, arraySize);
+    // glUnmapNamedBuffer(particlePosSSBO);
+    // glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    // printf("ParticlePOints[100]=%i\n", particlePoints[100].x);
 
     forceShader = new Gloom::Shader();
     forceShader->attach("../res/shaders/boids/computeForce.comp");
@@ -72,6 +82,22 @@ ParticleSystem::~ParticleSystem()
 
 void ParticleSystem::update()
 {
+
+    integrationShader->activate();
+    glUniform1f(integrationShader->getUniformFromName("DT"), boidProperties.dt);
+    glUniform1f(integrationShader->getUniformFromName("max_vel"), boidProperties.max_vel);
+    glUniform1i(integrationShader->getUniformFromName("wrap_around"), boidProperties.wrap_around);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particlePosSSBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, particleVelSSBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, particleAccSSBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, prefixSumsLoc);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, bucketSizesLoc);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, particlePosSSBO_prev);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, particleVelSSBO_prev);  
+    glDispatchCompute(INT_CEIL(NUM_PARTICLES, WORK_GROUP_SIZE),1,1);
+    // glDispatchCompute(ceil(float(NUM_PARTICLES)/WORK_GROUP_SIZE), 1, 1);
+    glMemoryBarrier(GL_ALL_BARRIER_BITS);
+    integrationShader->deactivate();
     // getTimeDeltaSeconds();
     countBucketSizes();
     // printf("Bucket sizes time: %f\n", getTimeDeltaSeconds());
@@ -91,25 +117,11 @@ void ParticleSystem::update()
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, particleAccSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, prefixSumsLoc);
 
-    glDispatchCompute(ceil(float(NUM_PARTICLES)/WORK_GROUP_SIZE), 1, 1);
+    glDispatchCompute(INT_CEIL(NUM_PARTICLES, WORK_GROUP_SIZE), 1, 1);
     glMemoryBarrier(GL_ALL_BARRIER_BITS);
     forceShader->deactivate();
-    // printf("Force update time: %f\n", getTimeDeltaSeconds());
 
-    integrationShader->activate();
-    glUniform1f(integrationShader->getUniformFromName("DT"), boidProperties.dt);
-    glUniform1f(integrationShader->getUniformFromName("max_vel"), boidProperties.max_vel);
-    glUniform1i(integrationShader->getUniformFromName("wrap_around"), boidProperties.wrap_around);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particlePosSSBO);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, particleVelSSBO);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, particleAccSSBO);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, prefixSumsLoc);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, bucketSizesLoc);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, particlePosSSBO_prev);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, particleVelSSBO_prev);  
-    glDispatchCompute(ceil(float(NUM_PARTICLES)/WORK_GROUP_SIZE), 1, 1);
-    glMemoryBarrier(GL_ALL_BARRIER_BITS);
-    integrationShader->deactivate();
+    // printf("Force update time: %f\n", getTimeDeltaSeconds());
 }
 
 /**
@@ -140,7 +152,6 @@ void ParticleSystem::render(GLFWwindow *window, Gloom::Camera *camera)
     glUniform3fv(renderShader->getUniformFromName("camera_pos"), 1, glm::value_ptr(glm::vec3(camera->getViewMatrix()[3])));
     glBindVertexArray(particleVAO);
     // Finally we draw the particles
-    // glDrawArrays(GL_POINTS, 0, NUM_PARTICLES);
     glDrawElementsInstanced(GL_TRIANGLES, particleModel->indices.size(), GL_UNSIGNED_INT, (void *)0, NUM_PARTICLES);
     renderShader->deactivate();
 }
@@ -187,7 +198,7 @@ void ParticleSystem::initParticles()
     uint32_t positions_size = NUM_PARTICLES * sizeof(struct pos);
     glGenBuffers(1, &particlePosSSBO);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, particlePosSSBO);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, NUM_PARTICLES * sizeof(struct pos), particlePoints, GL_DYNAMIC_COPY);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, positions_size, particlePoints, GL_DYNAMIC_COPY);
 
     particlePoints = (struct pos *)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, positions_size, bufMask);
     glm::vec3 diagonal = boundingBox->high-boundingBox->low;
@@ -200,7 +211,7 @@ void ParticleSystem::initParticles()
     }
 
     glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-    
+
     // Prev positions
     glGenBuffers(1, &particlePosSSBO_prev);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, particlePosSSBO_prev);
@@ -220,7 +231,6 @@ void ParticleSystem::initParticles()
         particleVels[i].vw = 0;
     }
     glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-
 
     // previous velocity
     glGenBuffers(1, &particleVelSSBO_prev);
@@ -317,26 +327,27 @@ void ParticleSystem::countBucketSizes() {
     gridBucketsShader->activate();
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particlePosSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, bucketSizesLoc);
-    glDispatchCompute(ceil(float(NUM_PARTICLES)/WORK_GROUP_SIZE), 1, 1);
+    glDispatchCompute(INT_CEIL(NUM_PARTICLES, WORK_GROUP_SIZE), 1, 1);
     glMemoryBarrier(GL_ALL_BARRIER_BITS);
     gridBucketsShader->deactivate();
 
-    /* For debugging :) */
+    // /* For debugging :) */
     // uint32_t arraySize = sizeof(GLuint)*(boundingBox->numCells);
     // glBindBuffer(GL_SHADER_STORAGE_BUFFER, bucketSizesLoc);
     // GLuint* sizes = (GLuint*)glMapNamedBufferRange(bucketSizesLoc, 0, arraySize, GL_MAP_READ_BIT);
     // memcpy(bucketSizes, sizes, arraySize);
     // glUnmapNamedBuffer(bucketSizesLoc);
     // glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-    // int sum;
+    // int sum = 0;
     // for (int i = 0; i < boundingBox->numCells; i++) {
-    //         sum += bucketSizes[i];
-    //     if (bucketSizes[i] > NUM_PARTICLES) {
+    //     sum += bucketSizes[i];
+    //     if (bucketSizes[i] > NUM_PARTICLES || bucketSizes[i] < 0) {
     //         printf("Bucket size at [%i] is %i\n", i, bucketSizes[i]);
     //     }
     // }
+
     // printf("BucketSizes[100]=%i\n", bucketSizes[100]);
-    // printf("Sum of all buckets: %i", sum);
+    // printf("Sum of all buckets: %i\n", sum);
 }
 
 void ParticleSystem::computePrefixSum() {
@@ -348,15 +359,8 @@ void ParticleSystem::computePrefixSum() {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, prefixSumsLoc);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, bucketSizesLoc);
     glUniform1ui(prefixSumShader->getUniformFromName("chunkSize"), chunkSize);
-    glDispatchCompute(ceil((float(boundingBox->numCells))/WORK_GROUP_SIZE), 1, 1);
+    glDispatchCompute(INT_CEIL(boundingBox->numCells, WORK_GROUP_SIZE), 1, 1);
     glMemoryBarrier(GL_ALL_BARRIER_BITS);
-    // do
-    // {
-    //     glUniform1ui(prefixSumShader->getUniformFromName("chunkSize"), chunkSize);
-    //     glDispatchCompute(ceil((float(boundingBox->numCells))/WORK_GROUP_SIZE), 1, 1);
-    //     glMemoryBarrier(GL_ALL_BARRIER_BITS);
-    //     chunkSize *= 2;
-    // } while (chunkSize <= boundingBox->numCells);
 
     // // Noe er galt med prefix sum!!!
     // // Fungerer for numCells=4096
@@ -369,7 +373,7 @@ void ParticleSystem::computePrefixSum() {
 
     // printf("PrefixSum[%d]: %d\n",boundingBox->numCells-1,prefixSums[boundingBox->numCells-1]);
     // printf("Num particles: %i\n", NUM_PARTICLES);
-    // prefixSumShader->deactivate();
+    prefixSumShader->deactivate();
     
 }
 
@@ -383,19 +387,29 @@ void ParticleSystem::computeReindexGrid() {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, particlePosSSBO_prev);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, particleVelSSBO_prev);    
 
-    glDispatchCompute(ceil(float(NUM_PARTICLES)/WORK_GROUP_SIZE), 1, 1);
+    glDispatchCompute(INT_CEIL(NUM_PARTICLES, WORK_GROUP_SIZE), 1, 1);
     glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
-    // uint32_t arraySize = NUM_PARTICLES * sizeof(GLuint);
-    // glBindBuffer(GL_SHADER_STORAGE_BUFFER, particleIndicesLoc);
-    // GLuint* sums = (GLuint*)glMapNamedBufferRange(particleIndicesLoc, 0, arraySize, GL_MAP_READ_BIT);
-    // memcpy(particleIndices, sums, arraySize);
-
-    // glUnmapNamedBuffer(particleIndicesLoc);
+    // /* For debugging :) */
+    // uint32_t arraySize = sizeof(GLuint)*(boundingBox->numCells);
+    // glBindBuffer(GL_SHADER_STORAGE_BUFFER, bucketSizesLoc);
+    // GLuint* sizes = (GLuint*)glMapNamedBufferRange(bucketSizesLoc, 0, arraySize, GL_MAP_READ_BIT);
+    // memcpy(bucketSizes, sizes, arraySize);
+    // glUnmapNamedBuffer(bucketSizesLoc);
     // glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    // int sum = 0;
+    // for (int i = 0; i < boundingBox->numCells; i++) {
+    //     sum += bucketSizes[i];
+    //     if (bucketSizes[i] != 0) {
+    //         printf("Bucket size at [%i] is %i\n", i, bucketSizes[i]);
+    //     }
+    //     // if (bucketSizes[i] > NUM_PARTICLES || bucketSizes[i] < 0) {
+    //     //     printf("Bucket size at [%i] is %i\n", i, bucketSizes[i]);
+    //     // }
+    // }
 
-    // printf("particleIndices[%d]: %d\n",NUM_PARTICLES-1,particleIndices[NUM_PARTICLES-1]);
-    // printf("Num particles: %i\n", NUM_PARTICLES);
+    // printf("BucketSizes[100]=%i\n", bucketSizes[100]);
+    // printf("Sum of all buckets: %i\n", sum);
 
 
     reindexShader->deactivate();

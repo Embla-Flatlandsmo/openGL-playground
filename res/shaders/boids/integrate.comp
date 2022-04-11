@@ -22,12 +22,12 @@ layout(std430, binding=5) buffer bucketSize
     uint bucketSizes[];
 };
 
-layout(std140, binding=6) buffer Pos_backup
+layout(std140, binding=6) writeonly buffer Pos_backup
 {
     vec4 Positions_backup[];
 };
 
-layout(std140, binding=7) buffer Vel_backup
+layout(std140, binding=7) writeonly buffer Vel_backup
 {
     vec4 Velocities_backup[];
 };
@@ -40,8 +40,6 @@ uniform bool wrap_around;
 
 uniform float DT;
 uniform float max_vel;
-// const float DT = 1.0;
-// const float max_vel = 0.3;
 vec3 diagonal = boundingBoxHigh-boundingBoxLow;
 
 struct boid_t
@@ -90,7 +88,6 @@ void main() {
     if (gid >= numBoids) {
         return;
     }
-
     boid_t current_boid = get_boid(gid);
 
     current_boid.vel += current_boid.acc*DT;
@@ -129,6 +126,10 @@ void main() {
 
     
     update_boid(gid, current_boid);
+
+    // It is possible to do gridBuckets inside this shader.
+    // For the sake of clarity, I have done it in its own shader.
+    
     // vec3 range = diagonal/gridRes;
     // uvec3 vgridIdx = uvec3((current_boid.pos-boundingBoxLow)/range);
     // uint cellIdx =  uint(gridRes.x * gridRes.y * vgridIdx.z + gridRes.x * vgridIdx.y + vgridIdx.x);

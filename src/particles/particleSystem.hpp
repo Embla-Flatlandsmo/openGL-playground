@@ -27,12 +27,12 @@ struct acc
 struct particleProperties
 {
     float size = 0.05;
-    float cohesion_factor = 0.005;
+    float cohesion_factor = 0.4;
     float separation_factor = 0.4;
     float separation_range = 0.5;
     float alignment_factor = 0.6;
-    float boundary_avoidance_factor = 0.01;
-    float dt = 0.01;
+    float boundary_avoidance_factor = 0.003;
+    float dt = 0.3;
     float max_vel = 0.3;
     bool wrap_around = true;
     float view_range = 3.0;

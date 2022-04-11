@@ -17,15 +17,34 @@ layout(location=2) uniform vec3 boundingBoxHigh;
 layout(location=3) uniform uvec3 gridRes;
 layout(location=4) uniform uint numBoids;
 
+const vec3 diagonal = boundingBoxHigh-boundingBoxLow;
+
+uint flattenCellID(uint x, uint y, uint z) {
+    return uint(gridRes.x * gridRes.y * z + gridRes.x * y + x);
+}
+
+uvec3 getCellIDfromPos(vec3 pos)
+{
+    vec3 range = diagonal/gridRes;
+    return uvec3((pos-boundingBoxLow)/range);
+}
+
+uint getFlatCellIDfromPos(vec3 pos) {
+    uvec3 cellID = getCellIDfromPos(pos);
+    return flattenCellID(cellID.x, cellID.y, cellID.z);
+}
+
 void main(void)
 {
     uint gid = gl_GlobalInvocationID.x;
     if (gid >= numBoids) {
         return;
     }
-    vec3 diagonal = boundingBoxHigh-boundingBoxLow;
-    vec3 range = diagonal/gridRes;
-    uvec3 vgridIdx = uvec3((Positions[gid].xyz-boundingBoxLow)/range);
-    uint cellIdx =  uint(gridRes.x * gridRes.y * vgridIdx.z + gridRes.x * vgridIdx.y + vgridIdx.x);
+    vec3 pos = Positions[gid].xyz;
+    uint cellIdx = getFlatCellIDfromPos(pos);
+    // vec3 range = diagonal/gridRes;
+    // uvec3 vgridIdx = uvec3((Positions[gid].xyz-boundingBoxLow)/range);
+    // uint cellIdx =  uint(gridRes.x * gridRes.y * vgridIdx.z + gridRes.x * vgridIdx.y + vgridIdx.x);
+
     atomicAdd(bucketSizes[cellIdx], 1);
 }

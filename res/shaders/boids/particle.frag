@@ -25,7 +25,7 @@ float fogIntensity(float d)
 void main() {
 	// Lambert's cosine law
   	float lambertian = max(dot(normalize(normal_in), normalize(light_direction)), 0.0);
-	vec4 color = vec4(0.8*lambertian*diffuseColor+0.2*ambientColor, 1.0);
+	vec4 color = vec4(0.4*lambertian*diffuseColor+0.3*ambientColor, 1.0);
 	float d = distance(camera_pos, world_space_pos);
 	out_color = vec4(mix(color.xyz, fog_color, fogIntensity(d)), 1.0);
 }
