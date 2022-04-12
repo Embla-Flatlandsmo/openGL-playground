@@ -1,0 +1,137 @@
+#version 430 
+
+layout( local_size_x = 1024, local_size_y = 1, local_size_z = 1 ) in;
+
+layout(std140, binding=0) buffer Pos
+{
+    vec4 Positions[];
+};
+
+layout(std140, binding=1) buffer Vel
+{
+    vec4 Velocities[];
+};
+
+layout(std140, binding=2) readonly buffer Acc
+{
+    vec4 Accelerations[];
+};
+
+layout(std430, binding=5) buffer bucketSize
+{
+    uint bucketSizes[];
+};
+
+layout(std140, binding=6) writeonly buffer Pos_backup
+{
+    vec4 Positions_backup[];
+};
+
+layout(std140, binding=7) writeonly buffer Vel_backup
+{
+    vec4 Velocities_backup[];
+};
+
+uniform vec3 boundingBoxLow;
+uniform vec3 boundingBoxHigh;
+uniform uvec3 gridRes;
+uniform int numBoids;
+uniform bool wrap_around;
+
+uniform float DT;
+uniform float max_vel;
+vec3 diagonal = boundingBoxHigh-boundingBoxLow;
+
+struct boid_t
+{
+    vec3 pos;
+    vec3 vel;
+    vec3 acc;
+};
+
+float vecLen (vec3 v)
+{
+	return sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
+}
+
+vec3 normalize (vec3 v)
+{
+	return v / (vecLen(v)+0.0001);
+}
+
+vec3 limit(vec3 v, float limit){
+    if (dot(v, v) > limit * limit){
+        return normalize(v) * limit;
+    }
+    return v;
+}
+
+boid_t get_boid(uint i) {
+    boid_t b;
+    b.pos = Positions[i].xyz;
+    b.vel = Velocities[i].xyz;
+    b.acc = Accelerations[i].xyz;
+    return b;
+}
+
+void update_boid(uint i, boid_t b) {
+    Positions[i].xyz = b.pos;
+    Positions_backup[i].xyz = b.pos;
+
+    Velocities[i].xyz = b.vel;
+    Velocities_backup[i].xyz = b.vel;
+    // Accelerations[i].xyz = b.acc; //Can't do because readonly
+}
+
+void main() {
+    uint gid = gl_GlobalInvocationID.x;
+    if (gid >= numBoids) {
+        return;
+    }
+    boid_t current_boid = get_boid(gid);
+
+    current_boid.vel += current_boid.acc*DT;
+    current_boid.vel = limit(current_boid.vel, max_vel);
+
+    if (wrap_around) {
+        current_boid.pos = mod(((current_boid.pos + current_boid.vel*DT) - boundingBoxLow + diagonal), diagonal) + boundingBoxLow;
+    } else {
+        current_boid.pos += current_boid.vel*DT;
+        // BOUNCE
+        if ((current_boid.pos.x < boundingBoxLow.x) && (current_boid.vel.x < 0.0)) {
+            current_boid.vel.x *= -1;
+            current_boid.pos.x += current_boid.vel.x*DT;
+        } else if ((current_boid.pos.x > boundingBoxHigh.x) && (current_boid.vel.x >= 0.0)) {
+            current_boid.vel.x *= -1;
+            current_boid.pos.x += current_boid.vel.x*DT;
+        }
+
+        if ((current_boid.pos.y < boundingBoxLow.y) && (current_boid.vel.y < 0.0)) {
+            current_boid.vel.y *= -1;
+            current_boid.pos.y += current_boid.vel.y*DT;
+        } else if ((current_boid.pos.y > boundingBoxHigh.y) && (current_boid.vel.y >= 0.0)) {
+            current_boid.vel.y *= -1;
+            current_boid.pos.y += current_boid.vel.y*DT;
+        }
+
+        if ((current_boid.pos.z < boundingBoxLow.z) && (current_boid.vel.z < 0.0)) {
+            current_boid.vel.z *= -1;
+            current_boid.pos.z += current_boid.vel.z*DT;
+        } else if ((current_boid.pos.z > boundingBoxHigh.z) && (current_boid.vel.z >= 0.0)) {
+            current_boid.vel.z *= -1;
+            current_boid.pos.z += current_boid.vel.z*DT;
+        }
+    }
+
+
+    
+    update_boid(gid, current_boid);
+
+    // It is possible to do gridBuckets inside this shader.
+    // For the sake of clarity, I have done it in its own shader.
+    
+    // vec3 range = diagonal/gridRes;
+    // uvec3 vgridIdx = uvec3((current_boid.pos-boundingBoxLow)/range);
+    // uint cellIdx =  uint(gridRes.x * gridRes.y * vgridIdx.z + gridRes.x * vgridIdx.y + vgridIdx.x);
+    // atomicAdd(bucketSizes[cellIdx], 1);
+}

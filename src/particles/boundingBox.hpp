@@ -23,10 +23,9 @@ public:
     /**
      * @brief Render the bounding box as a wireframe
      * 
-     * @param window window to render in
-     * @param camera camera input
+     * @param camera camera through which to render object
      */
-    void renderAsWireframe(GLFWwindow *window, Gloom::Camera *camera);
+    void renderAsWireframe(Gloom::Camera *camera);
     /**
      * @brief Minimum coordinates of bounding box
      */

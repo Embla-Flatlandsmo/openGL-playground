@@ -1,0 +1,322 @@
+#version 430
+
+/*
+Ray march to create a cloud.
+
+Parts of the code might look similar to Federico Vaccaro's OpenGL Terrain Engine cloud shader. 
+It was an excellent reference for starting out! Thanks for that :D
+https://github.com/fede-vaccaro/TerrainEngine-OpenGL/blob/e5a2b756fff6dd6f825713f4f2912171e000bc72/shaders/volumetric_clouds.comp
+*/
+
+
+layout(binding=0) uniform sampler3D perlinWorley; 
+layout(binding=2) uniform sampler2D depth;
+layout(binding=3) uniform sampler2D frag_color;
+
+uniform vec3 AABBmin;
+uniform vec3 AABBmax;
+
+uniform float light_step_size;
+uniform float time;
+
+uniform mat4 inv_view;
+uniform mat4 inv_proj;
+uniform vec4 viewport;
+
+//=============== CLOUD UNIFORMS ===============//
+uniform float density_factor = 0.2;
+uniform float texture_scale = 1.0;
+uniform float weather_texture_scale = 1.0;
+uniform float cloud_speed = 100.0;
+uniform float fog_factor = 0.0075;
+uniform vec3 cloud_shadow_color = vec3(0.65,0.65,0.75);
+uniform vec3 cloud_light_color = vec3(1.0,0.6,0.3);
+uniform vec3 fog_color = vec3(183, 237, 255)/255.0;
+
+//=============== LIGHT UNIFORMS ===============//
+uniform vec3 sun_direction = normalize(vec3(0.5, 0.5, 0.0));
+uniform float sun_power = 200.0;
+
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+layout (rgba8, binding = 0) uniform image2D OutputFrag;
+
+#define RAYMARCH_STEPS 200
+
+
+// Maps a value from one range to another
+float remap(float original_value, float original_min, float original_max, float new_min, float new_max)
+{
+    return (((original_value - original_min) / (original_max - original_min)) * (new_max - new_min)) + new_min;
+}
+
+#define BAYER_FACTOR 5.0/16.0
+uniform float bayerFilter[16u] = float[]
+(
+	0.0*BAYER_FACTOR, 8.0*BAYER_FACTOR, 2.0*BAYER_FACTOR, 10.0*BAYER_FACTOR,
+	12.0*BAYER_FACTOR, 4.0*BAYER_FACTOR, 14.0*BAYER_FACTOR, 6.0*BAYER_FACTOR,
+	3.0*BAYER_FACTOR, 11.0*BAYER_FACTOR, 1.0*BAYER_FACTOR, 9.0*BAYER_FACTOR,
+	15.0*BAYER_FACTOR, 7.0*BAYER_FACTOR, 13.0*BAYER_FACTOR, 5.0*BAYER_FACTOR
+);
+
+
+struct Ray {
+  vec3 origin;
+  vec3 dir;
+  // float cosA;
+};
+
+//=============== COORDINATE UTILITIES ===============//
+
+bool IntersectBox (Ray r, vec3 boxmin, vec3 boxmax, out float tnear, out float tfar)
+{
+  vec3 invR = vec3(1.0) / r.dir;
+  
+  vec3 tbbmin = invR * (boxmin - r.origin);
+  vec3 tbbmax = invR * (boxmax - r.origin);
+   
+  vec3 tmin = min(tbbmin, tbbmax);
+  vec3 tmax = max(tbbmin, tbbmax);
+  
+  tnear = max(max(tmin.x, tmin.y), tmin.z);
+  tfar  = min(min(tmax.x, tmax.y), tmax.z);
+
+  return tfar > tnear;
+}
+
+bool RayAABBIntersection (Ray r, vec3 bbmin, vec3 bbmax, 
+                          out float rtnear, out float rtfar)
+{
+ 
+  float tnear, tfar;
+  bool hit = IntersectBox(r, bbmin, bbmax, tnear, tfar);
+
+  tnear = max(tnear, 0.0);
+
+  rtnear = tnear;
+  rtfar  = tfar;
+
+  return hit;
+}
+
+vec3 uvwFromWorldPos(vec3 pos)
+{
+  vec3 bbsize = AABBmax-AABBmin;
+  float largest_side = max(max(bbsize.x, bbsize.y), bbsize.z);
+  
+  // Bring pos to world origin
+  vec3 centered_pos = pos-AABBmin;
+
+  // Divide by bbsize to get coordinates on [0,1]
+  return mod(centered_pos/largest_side, vec3(1.0));
+  // return clamp(centered_pos/bbsize, vec3(0.0), vec3(1.0));
+}
+
+
+// Finds fragment coordinate fragCoord.x = [0,1920], fragCoord.y=[0,1080]
+// and converts it to normalized device coordinates [-1, 1]
+vec3 fragToClipSpace(uvec2 fragCoord)
+{
+  vec2 ndc = 2.0*vec2(fragCoord.xy-viewport.xy)/viewport.zw - 1.0;
+  return vec3(ndc, -1.0);
+}
+
+vec2 fragCoordToUV(uvec2 fragCoord)
+{
+  return vec2(fragCoord)/(viewport.zw);
+}
+
+// https://mynameismjp.wordpress.com/2009/03/10/reconstructing-position-from-depth/
+// Function for converting depth to view-space position
+// in deferred pixel shader pass.  vTexCoord is a texture
+// coordinate for a full-screen quad, such that x=0 is the
+// left of the screen, and y=0 is the top of the screen.
+vec3 VSPositionFromDepth(vec2 vTexCoord)
+{
+    // Get the depth value for this pixel
+    float z = texture(depth, vTexCoord).r;  
+    // Get x/w and y/w from the viewport position
+    float x = vTexCoord.x * 2 - 1;
+    // float y = (1 - vTexCoord.y) * 2 - 1;
+    float y = vTexCoord.y*2-1;
+    vec4 vProjectedPos = vec4(x, y, z, 1.0f);
+    // Transform by the inverse projection matrix
+    vec4 vPositionVS = inv_proj*vProjectedPos;  
+    // Divide by w to get the view-space position
+    return vPositionVS.xyz / vPositionVS.w;  
+}
+
+
+// Normalized Device Coordinates (Clip Space coordinates) [-1,1] to screen position [0,1]
+vec2 ndcToScreenPos(vec2 ndc)
+{
+  return (ndc*0.5+0.5);
+}
+
+//=============== CLOUD UTILITIES ===============//
+
+float getHeightFractionForPoint(vec3 position)
+{
+  // Get global fractional position in cloud zone
+  float cloudMinHeight = AABBmin.y;
+  float cloudMaxHeight = AABBmax.y;
+  float height_fraction = (position.y-cloudMinHeight)/(cloudMaxHeight - cloudMinHeight);
+  return clamp(height_fraction, 0.0, 1.0);
+}
+
+float getDensityForCloud(float heightFraction)
+{
+  return clamp(smoothstep(1.0, -0.5, heightFraction), 0.0, 0.9);
+}
+
+/*
+From GPU pro 7:
+1. The first step is to retrieve the four low-frequency noise values required
+   to build a basic cloud shape. We sample the first 3D texture, containing
+   low-frequency octaves.
+2. We will use the first channel, which contains the Perlin-Worley noise, to
+   establish our base cloud shape.
+3. Though the basic Perlin-Worley noise provides a reasonable cloud density
+   function, it lacks the detail of a realistic cloud. We use a remapping function
+   to add the three other low-frequency noises to the edges of the Perlin-Worley
+   noise. This method of combining noises prevents the interior of the Perlin-
+   Worley cloud shape from becoming non-homogenous and also ensures that
+   we only add detail in the areas that we can see.
+4. To determine the type of cloud we are drawing, we compute our density
+   height function based on the cloud type attribute from our weather texture.
+5. Next, we multiply the base cloud shape by the density height function to
+   create the correct type of cloud according to the weather data.
+
+*/
+
+#define CLOUD_TOP_OFFSET 50.0
+const vec3 windDirection = (vec3(1.0, 0.0, 0.0));
+float sampleCloudDensity(vec3 rayPos, int lod)
+{
+  vec3 uvw = uvwFromWorldPos(rayPos*texture_scale);
+  float height_fraction = getHeightFractionForPoint(rayPos); 
+  // if (height_fraction < 0.0 || height_fraction > 1.0) return 0.0;
+	// vec3 animation = height_fraction * windDirection * CLOUD_TOP_OFFSET + windDirection * time * cloud_speed;
+  vec3 animation = height_fraction*windDirection*CLOUD_TOP_OFFSET + (windDirection + vec3(0.0, 0.1, 0.0))*time*cloud_speed;
+  vec3 moving_uvw = uvwFromWorldPos((rayPos+animation)*weather_texture_scale);
+  // Original sample had low frequency noise as a 32x32x32 texture
+  // int level_of_detail = int(texture_size.x/32);
+  // int lod = 128/32;
+
+  // We read the low-frequency Perlin-Worley and Worley noises
+  vec4 low_frequency_noises = textureLod(perlinWorley, uvw, lod); 
+
+  // Build FBM out of the low frequency noises:
+  float low_freq_fbm = (low_frequency_noises.g * 0.625)
+                       + (low_frequency_noises.b * 0.25)
+                       + (low_frequency_noises.a * 0.125);
+            
+  // Define the base cloud shape by dilating it with the low-frequency FBM made of worley noise:
+  float base_cloud = remap(low_frequency_noises.r, -(1.0-low_freq_fbm), 1.0, 0.0, 1.0);
+	float density_height_gradient = getDensityForCloud(height_fraction);
+  base_cloud *= density_height_gradient;
+
+
+  vec4 weather_data = textureLod(perlinWorley, vec3(moving_uvw.x, 0.2, moving_uvw.z), 4);
+  float cloud_coverage = weather_data.a;
+
+  float base_cloud_with_coverage = remap(base_cloud, cloud_coverage, 1.0, 0.0, 1.0);
+  base_cloud_with_coverage *= cloud_coverage;
+  return clamp(base_cloud_with_coverage, 0.0, 1.0);
+}
+
+
+//=============== RAYMARCH & MAIN ===============//
+vec4 raymarchCloud(Ray ray_world, Ray ray_viewspace, float tnear, float tfar, vec3 view_space_obstacle)
+{
+  vec3 color = vec3(0.0);
+  vec3 totalTransmittance = vec3(1.0);
+  float t = tnear;
+  vec3 pos = ray_world.origin + ray_world.dir*tnear;
+  const int oct = 5;
+  vec4 sum = vec4(0.0);
+
+  float dt = (tfar-t)/float(RAYMARCH_STEPS);
+  for (int i = 0; i < RAYMARCH_STEPS; i++)
+  {
+    float density = sampleCloudDensity(pos, 0)*density_factor;
+    if (density > 0.01)
+    {
+      // The lighting calculations are based off Inigo Quilez clouds: https://www.shadertoy.com/view/XslGRr
+
+      // Find directional derivative
+      float light_directional_derivative = sampleCloudDensity(pos+light_step_size*sun_direction, 0)*density_factor;
+      float dif = clamp((density-light_directional_derivative)/light_step_size, 0.0, 1.0);
+
+      vec3 lin = cloud_shadow_color*1.1 + 0.8*cloud_light_color*dif*sun_power;
+      vec4 col = vec4(mix(vec3(1.0), vec3(0.0), density), density);
+      col.xyz *= lin;
+      col.xyz = mix(col.xyz,fog_color, 1.0-exp2(-fog_factor*(t/100.0)));
+
+      // composite front to back
+      col.a    = min(col.a*8.0*dt,1.0);
+      col.rgb *= col.a;
+      sum += col*(1.0-sum.a);
+    }
+    vec3 ray_viewspace_position = ray_viewspace.origin + ray_viewspace.dir*t;
+    if (t > tfar) break;
+    if (ray_viewspace_position.z <= view_space_obstacle.z) break; // TODO: Figure out how to integrate until exact t value
+    if (sum.a > 0.99)
+    {
+      sum.a = 1.0;
+      break;
+    }
+    t += dt;
+    pos = ray_world.origin + ray_world.dir*t;
+  }
+
+  return clamp(sum, 0.0, 1.0);
+}
+
+void main()
+{
+  ivec2 fragCoord = ivec2(gl_GlobalInvocationID.xy);
+  ivec2 size = imageSize(OutputFrag);
+  if (fragCoord.x > viewport.z || fragCoord.y > viewport.w) return;
+  
+  Ray ray_viewspace;
+  // Create ray origin and direction
+  // Transfer from screen space -> clip space -> world space 
+  // The ray is at clipspace coords x,y and shoots a ray into the scene, (i.e. z=1)
+  vec4 ray_dir_ndc = vec4(fragToClipSpace(fragCoord).xy, 1.0 , 1.0);
+  vec4 ray_dir_view = inv_proj*ray_dir_ndc;
+
+  // I don't know why this works, but it does
+  ray_dir_view = vec4(ray_dir_view.xy, -1.0, 0.0);
+  vec4 ray_dir_world = (inv_view*ray_dir_view);
+
+  // The same for ray origin, only that this time the coordinate starts at the near plane, i.e. z=-1
+  vec4 ray_origin_ndc = vec4(fragToClipSpace(fragCoord), 1.0);
+  vec4 ray_origin_view = inv_proj*ray_origin_ndc;
+  ray_origin_view /= ray_origin_view.w; 
+  vec4 ray_origin_world = inv_view*ray_origin_view;
+
+
+  Ray ray_world;
+  ray_world.origin = ray_origin_world.xyz;
+  ray_world.dir = normalize(ray_dir_world.xyz);
+
+  ray_viewspace.origin = ray_origin_view.xyz;
+  ray_viewspace.dir = normalize(ray_dir_view.xyz);
+  float tnear, tfar;
+  bool hit = RayAABBIntersection(ray_world, AABBmin, AABBmax, tnear, tfar);
+	int a = int(fragCoord.x) % 4;
+	int b = int(fragCoord.y) % 4;
+  tnear += bayerFilter[a*4+b];
+  // Boid position (if there is one) in view space:
+  vec3 view_space_obstacle = VSPositionFromDepth(fragCoordToUV(fragCoord));
+
+  vec4 dst = texture(frag_color, fragCoordToUV(fragCoord));
+  dst.a = 1.0;
+  if (hit)
+  {
+    vec4 res = raymarchCloud(ray_world, ray_viewspace, tnear, tfar, view_space_obstacle);
+    dst.xyz = dst.xyz*(1.0-res.a) + res.xyz;
+  }
+  imageStore(OutputFrag, fragCoord, dst);
+}

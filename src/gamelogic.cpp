@@ -1,66 +1,34 @@
 #include <chrono>
 
+#include <GLFW/glfw3.h>
+#include <glad/glad.h>
+#include <glm/vec3.hpp>
+#include <iostream>
+
+// ImGui
 #include "utilities/imgui/imgui.h"
 #include "utilities/imgui/imgui_impl_glfw.h"
 #include "utilities/imgui/imgui_impl_opengl3.h"
 
-#include <GLFW/glfw3.h>
-#include <glad/glad.h>
+// Various utils
+#include "utilities/timeutils.h"
+#include "utilities/camera.hpp"
 
 
-#include <SFML/Audio/SoundBuffer.hpp>
-#include <utilities/shader.hpp>
-#include <glm/vec3.hpp>
-#include <iostream>
-#include <utilities/timeutils.h>
-#include <utilities/mesh.h>
-#include <utilities/shapes.h>
-#include <utilities/glutils.h>
-#include <utilities/camera.hpp>
-#include <utilities/objLoader.hpp>
-#include <SFML/Audio/Sound.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <fmt/format.h>
-#include "gamelogic.h"
-#include "sceneGraph.hpp"
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/transform.hpp>
-
-#include "utilities/imageLoader.hpp"
-#include "utilities/glfont.h"
+// Boids, clouds and sky
 #include "particles/particleSystem.hpp"
 #include "clouds/cloudBox.hpp"
 #include "sky/sky.hpp"
 
-enum KeyFrameAction {
-    BOTTOM, TOP
-};
 
+#define UNUSED(expr) (void)(expr) // Macro to silence wunused-parameter
 bool toggleDebug = false;
 
-#include <timestamps.h>
+const float move_speed_debug = 15.0f;
+const float move_speed_normal = 3.0f;
 
-double padPositionX = 0;
-double padPositionZ = 0;
-
-unsigned int currentKeyFrame = 0;
-unsigned int previousKeyFrame = 0;
-
-SceneNode* rootNode;
-SceneNode* boxNode;
-SceneNode* ballNode;
-SceneNode* padNode;
-
-// SceneNode* cloudNode;
-
-
-double ballRadius = 3.0f;
 
 // These are heap allocated, because they should not be initialised at the start of the program
-sf::SoundBuffer* buffer;
-Gloom::Shader* shader;
-sf::Sound* sound;
 Gloom::Camera* camera;
 ParticleSystem* particles;
 CloudBox* cloud;
@@ -68,56 +36,26 @@ Sky* sky;
 
 ScreenQuad* screen;
 
-// const glm::vec3 boxDimensions(180, 90, 90);
-const glm::vec3 boxDimensions(300, 150, 150);
-const glm::vec3 padDimensions(30, 3, 40);
-
-glm::vec3 ballPosition(0, ballRadius + padDimensions.y, boxDimensions.z / 2);
-glm::vec3 ballDirection(1, 1, 0.2f);
-
-CommandLineOptions options;
-
-bool hasStarted = false;
-bool hasLost = false;
-bool jumpedToNextFrame = false;
-bool isPaused = false;
-
-bool mouseLeftPressed   = false;
-bool mouseLeftReleased  = false;
-bool mouseRightPressed  = false;
-bool mouseRightReleased = false;
-
-// Modify if you want the music to start further on in the track. Measured in seconds.
-const float debug_startTime = 0;
-double totalElapsedTime = debug_startTime;
-double gameElapsedTime = debug_startTime;
-
-double mouseSensitivity = 1.0;
-double lastMouseX = windowWidth / 2;
-double lastMouseY = windowHeight / 2;
-
-
 void mouseCallback(GLFWwindow* window, double x, double y) {
+    UNUSED(window);
     camera->handleCursorPosInput(x, y);
 }
 
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+    UNUSED(window);
+    UNUSED(mods);
     camera->handleMouseButtonInputs(button, action);
 
 }
 
 void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-
+    UNUSED(window);
+    UNUSED(scancode);
+    UNUSED(mods);
     camera->handleKeyboardInputs(key, action);
     if (action == GLFW_PRESS) {
         switch(key) 
         {
-            case GLFW_KEY_U:
-                screen->incrementCurrentEffect();
-                break;
-            case GLFW_KEY_J:
-                screen->decrementCurrentEffect();
-                break;
             case GLFW_KEY_R:
                 particles->resetPositions();
                 break;
@@ -131,43 +69,21 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
     }
 }
 
-void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
-    buffer = new sf::SoundBuffer();
-    if (!buffer->loadFromFile("../res/Hall of the Mountain King.ogg")) {
-        return;
-    }
+/**
+ * @brief Initializes everything needed for the interactive experience :)
+ */
+void initGame(GLFWwindow* window) {
 
-    options = gameOptions;
-
-    // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-    // Callbacks setup for user input
-    // glfwSetCursorPosCallback(window, mouseCallback);
-    // glfwSetMouseButtonCallback(window, mouseButtonCallback);
     glfwSetKeyCallback(window, keyboardCallback);
 
     screen = new ScreenQuad();
-    camera = new Gloom::Camera(glm::vec3(20, 20, 70));
-    shader = new Gloom::Shader();
+    camera = new Gloom::Camera(glm::vec3(20, 20, 20));
+    camera->setMoveSpeed(move_speed_normal);
     sky = new Sky();
-    shader->makeBasicShader("../res/shaders/simple.vert", "../res/shaders/simple.frag");
-    shader->activate();
-
-
-    // Create meshes
-    Mesh box = cube(boxDimensions, glm::vec2(90), true, true);
-
-    // Fill buffers
-    unsigned int boxVAO  = generateBuffer(box);
-    // Construct scene
-    rootNode = createSceneNode();
-    boxNode  = createSceneNode();
-
-    rootNode->children.push_back(boxNode);
-    boxNode->vertexArrayObjectID = boxVAO;
-    boxNode->VAOIndexCount = box.indices.size();
-    cloud = new CloudBox(glm::vec3(-150.,-20.,-150.), glm::vec3(150., 50., 150.)); // Why is it multiplied by 10?
-    particles = new ParticleSystem(glm::vec3(10.,10.,10.), glm::vec3(40., 40., 40.));
+    cloud = new CloudBox(glm::vec3(-100,-100,-100), glm::vec3(150,150,150));
+    // If the box contains (0,0,0), the boids always try to go for the edge for some reason..
+    particles = new ParticleSystem(glm::vec3(10.,10.,10.), glm::vec3(40., 40., 40.)); 
 
     getTimeDeltaSeconds();
 
@@ -175,58 +91,15 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
 }
 
 void updateFrame(GLFWwindow* window) {
+    UNUSED(window);
     // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     double timeDelta = getTimeDeltaSeconds();
 
     camera->updateCamera(timeDelta);
-    glm::mat4 projection = camera->getProjMatrix();
-
-    glm::mat4 VP = projection * camera->getViewMatrix();
+    sky->update(camera);
+    cloud->update(camera);
     particles->update();
-    updateNodeTransformations(rootNode, VP);
-}
-
-void updateNodeTransformations(SceneNode* node, glm::mat4 transformationThusFar) {
-    glm::mat4 transformationMatrix =
-              glm::translate(node->position)
-            * glm::translate(node->referencePoint)
-            * glm::rotate(node->rotation.y, glm::vec3(0,1,0))
-            * glm::rotate(node->rotation.x, glm::vec3(1,0,0))
-            * glm::rotate(node->rotation.z, glm::vec3(0,0,1))
-            * glm::scale(node->scale)
-            * glm::translate(-node->referencePoint);
-
-    node->currentTransformationMatrix = transformationThusFar * transformationMatrix;
-
-    switch(node->nodeType) {
-        case GEOMETRY: break;
-        case POINT_LIGHT: break;
-        case SPOT_LIGHT: break;
-    }
-
-    for(SceneNode* child : node->children) {
-        updateNodeTransformations(child, node->currentTransformationMatrix);
-    }
-}
-
-void renderNode(SceneNode* node) {
-    glUniformMatrix4fv(3, 1, GL_FALSE, glm::value_ptr(node->currentTransformationMatrix));
-
-    switch(node->nodeType) {
-        case GEOMETRY:
-            if(node->vertexArrayObjectID != -1) {
-                glBindVertexArray(node->vertexArrayObjectID);
-                glDrawElements(GL_TRIANGLES, node->VAOIndexCount, GL_UNSIGNED_INT, nullptr);
-            }
-            break;
-        case POINT_LIGHT: break;
-        case SPOT_LIGHT: break;
-    }
-
-    for(SceneNode* child : node->children) { 
-        renderNode(child);
-    }
 }
 
 void renderFrame(GLFWwindow* window) {
@@ -235,20 +108,19 @@ void renderFrame(GLFWwindow* window) {
     glViewport(0, 0, windowWidth, windowHeight);
 
     screen->bindFramebuffer();
-    sky->render(camera);
-    particles->render(window, camera);
+    sky->render();
+    particles->render(camera);
 
-    // shader->activate();
-    // renderNode(rootNode);
     cloud->setDepthBuffer(screen->depth_texture);
     cloud->setColorBuffer(screen->color_texture);
-    cloud->render(camera);
+    cloud->render();
     screen->unbindFramebuffer();
 
-
-    screen->draw();
+    screen->render();
 
 }
+
+
 
 void renderUI(void) {
 
@@ -261,27 +133,29 @@ void renderUI(void) {
     const float DISTANCE = 10.0f;
     ImVec2 diagnostics_window_pos = ImVec2(DISTANCE, DISTANCE);
     ImVec2 diagnostics_window_pivot = ImVec2(0.0f, 0.0f);
-    // ImVec2 window_pos = ImVec2((corner & 1) ? windowWidth - DISTANCE : DISTANCE, (corner & 2) ? windowHeight - DISTANCE : DISTANCE);
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove;
-    // ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
     ImGui::SetNextWindowPos(diagnostics_window_pos, ImGuiCond_Always, diagnostics_window_pivot);
-    ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
+    ImGui::SetNextWindowBgAlpha(0.35f); // Transparent-ish background
     
     ImGui::Begin("Diagonstics", NULL, window_flags);
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
                         1000.0f / ImGui::GetIO().Framerate,
                         ImGui::GetIO().Framerate);
+    ImGui::Text("Number of Boids: %i", NUM_PARTICLES);
     ImGui::Separator();
     ImGui::Text("Controls:\nCamera: WASDEQ, Arrows, N\nDebug: Y\nReset: R");
     ImGui::End();
 
     if (toggleDebug)
     {
+        camera->setMoveSpeed(move_speed_debug);
         particles->renderUI();
         cloud->renderUI();
         screen->renderUI();
+    } else 
+    {
+        camera->setMoveSpeed(move_speed_normal);
     }
-
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

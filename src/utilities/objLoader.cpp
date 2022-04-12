@@ -6,7 +6,7 @@
 #include <string.h>
 
 /**
- * @brief Loads .OBJ files. From http://www.opengl-tutorial.org/beginners-tutorials/tutorial-7-model-loading/
+ * @brief Loads .OBJ files. Code is mostly from http://www.opengl-tutorial.org/beginners-tutorials/tutorial-7-model-loading/
  * 
  * @param filename .obj file to be loaded
  * @return Mesh containing the obj information
@@ -47,9 +47,8 @@ Mesh loadObj(std::string const &filename)
             fscanf(file, "%f %f %f\n", &normal.x, &normal.y, &normal.z);
             temp_normals.push_back(normal);
         } else if (strcmp(lineHeader, "f")==0) {
-            // std::string vertex1, vertex2, vertex3;
             unsigned int vertexIndex[3], uvIndex[3], normalIndex[3];
-            int matches = fscanf(file,"%d/%d/%d %d/%d/%d %d/%d/%d\n", &vertexIndex[0], &uvIndex[0], &normalIndex[0], &vertexIndex[1], &uvIndex[1], &normalIndex[1], &vertexIndex[2], &uvIndex[2], &normalIndex[2] );
+            int matches = fscanf(file,"%u/%u/%u %u/%u/%u %u/%u/%u\n", &vertexIndex[0], &uvIndex[0], &normalIndex[0], &vertexIndex[1], &uvIndex[1], &normalIndex[1], &vertexIndex[2], &uvIndex[2], &normalIndex[2] );
             if (matches != 9){
                 printf("File can't be read by our simple parser : ( Try exporting with other options\n");
                 return Mesh();
@@ -87,7 +86,7 @@ Mesh loadObj(std::string const &filename)
 
         out_vertexIndices.push_back(i);
     }
-    printf("Obj file loaded with out_vertex=%d\n", out_vertices.size());
+    printf("Obj file at %s loaded with vertex count=%llu\n", filename.c_str(), out_vertices.size());
 
     Mesh m;
     m.vertices = out_vertices;

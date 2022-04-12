@@ -137,7 +137,6 @@ namespace Gloom
                 fYaw -= 2.0;
             if (keysInUse[GLFW_KEY_N]) // Neutral rotation
                 cQuaternion = glm::quat(glm::vec3(0, 0, 0));
-
             // Trick to balance PC speed with movement
             GLfloat velocity = cMovementSpeed * deltaTime;
 
@@ -146,6 +145,11 @@ namespace Gloom
 
             // Update the view matrix based on the new information
             updateViewMatrix();
+        }
+
+        void setMoveSpeed(float movement_speed)
+        {
+            cMovementSpeed = movement_speed;
         }
 
     private:
@@ -187,7 +191,7 @@ namespace Gloom
         // Private member variables
 
         // Camera quaternion and frame pitch and yaw
-        glm::quat cQuaternion;
+        glm::quat cQuaternion = glm::quat(glm::vec3(0, 0, 0));
         GLfloat fPitch = 0.0f;
         GLfloat fYaw   = 0.0f;
 

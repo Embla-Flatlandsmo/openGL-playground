@@ -2,12 +2,12 @@
 
 layout( local_size_x = 1024, local_size_y = 1, local_size_z = 1 ) in;
 
-layout(std140, binding=0) buffer particlePositions
+layout(std140, binding=0) writeonly buffer particlePositions
 {
     vec4 Positions[];
 };
 
-layout(std140, binding=1) buffer particleVelocities
+layout(std140, binding=1) writeonly buffer particleVelocities
 {
     vec4 Velocities[];
 };
@@ -27,12 +27,12 @@ layout(std430, binding=5) buffer bucketSize
     uint bucketSizes[];
 };
 
-layout(std140, binding=6) buffer particlePositions_read
+layout(std140, binding=6) readonly buffer particlePositions_read
 {
     vec4 Positions_read[];
 };
 
-layout(std140, binding=7) buffer particleVelocities_read
+layout(std140, binding=7) readonly buffer particleVelocities_read
 {
     vec4 Velocities_read[];
 };
@@ -43,19 +43,37 @@ uniform vec3 boundingBoxHigh;
 uniform uvec3 gridRes;
 uniform uint numBoids;
 
+
+const vec3 diagonal = boundingBoxHigh-boundingBoxLow;
+
+uint flattenCellID(uint x, uint y, uint z) {
+    return uint(gridRes.x * gridRes.y * z + gridRes.x * y + x);
+}
+
+uvec3 getCellIDfromPos(vec3 pos)
+{
+    vec3 range = diagonal/gridRes;
+    return uvec3((pos-boundingBoxLow)/range);
+}
+
+uint getFlatCellIDfromPos(vec3 pos) {
+    uvec3 cellID = getCellIDfromPos(pos);
+    return flattenCellID(cellID.x, cellID.y, cellID.z);
+}
+
 void main(void) {
     uint gid = gl_GlobalInvocationID.x;
     if (gid >= numBoids) {
         return;
     }
-    vec3 diagonal = boundingBoxHigh-boundingBoxLow;
-    vec3 range = diagonal/gridRes;
-    uvec3 vgridIdx = uvec3((Positions[gid].xyz-boundingBoxLow)/range);
-    uint cellIdx =  uint(gridRes.x * gridRes.y * vgridIdx.z + gridRes.x * vgridIdx.y + vgridIdx.x);
-    
-    uint particleIdx = prefixSums[cellIdx]+atomicAdd(bucketSizes[cellIdx],-1)-1;
-    // Maybe the indexing here is wrong??
-    // Positions[particleIdx] = Positions_read[gid];
-    // Velocities[particleIdx] = Velocities_read[gid];
-    // particleIndices[gid]=particleIdx;
+
+    vec3 pos = Positions_read[gid].xyz;
+    vec3 vel = Velocities_read[gid].xyz;
+    uint cellIdx = getFlatCellIDfromPos(pos);
+
+    uint inBucketIndex = atomicAdd(bucketSizes[cellIdx], -1);
+    uint particleIdx = prefixSums[cellIdx]-inBucketIndex;
+
+    Positions[particleIdx].xyz = pos;
+    Velocities[particleIdx].xyz = vel;
 }
