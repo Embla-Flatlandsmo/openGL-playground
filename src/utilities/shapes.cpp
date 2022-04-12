@@ -6,8 +6,6 @@
 
 Mesh generateBoundingBoxMesh(glm::vec3 scale)
 {
-    // glm::vec3 points[8];
-    // int indices[36];
     glm::vec3 points[8] = {
         {0, 0, 0},
         {1, 0, 0},

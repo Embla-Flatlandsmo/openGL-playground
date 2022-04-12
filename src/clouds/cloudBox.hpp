@@ -26,17 +26,57 @@ struct cloudProperties
 class CloudBox 
 {
     public:
+        /**
+         * @brief Construct a new Cloud Box object
+         * 
+         * @param low lower bound of AABB
+         * @param high upper bound of AABB
+         */
         CloudBox(glm::vec3 low, glm::vec3 high);
         ~CloudBox();
+
+        /**
+         * @brief render the clouds
+         * 
+         */
         void render(void);
+        /**
+         * @brief Ray march clouds to generate 2D texture for the 
+         * CloudBox::render(void) function to use
+         */
         void update(Gloom::Camera *camera);
+
+        /**
+         * @brief Renders ImGUI panel
+         */
         void renderUI(void);
+
+        /**
+         * @brief Set the depth texture in the raymarch shader
+         * 
+         * @param textureID ID of the texture to bind to the depth texture
+         */
         void setDepthBuffer(GLuint textureID);
+        /**
+         * @brief Set the fragColor texture in the raymarch shader
+         * 
+         * @param textureID ID of the texture to bind to the fragColor texture
+         */
         void setColorBuffer(GLuint textureID);
+
+        /**
+         * @brief Updates sun direction
+         * 
+         * @param direction new direction
+         */
         void updateSun(glm::vec3 direction);
+        /**
+         * @brief Set the Debug object
+         * 
+         * @param enable 
+         */
         void setDebug(bool enable);
     private:
-        void generateTextures();
         GLuint vao = -1;
 
         ScreenQuad screen = ScreenQuad(false);

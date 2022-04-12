@@ -71,7 +71,7 @@ void main(void) {
     vec3 vel = Velocities_read[gid].xyz;
     uint cellIdx = getFlatCellIDfromPos(pos);
 
-    uint inBucketIndex = atomicAdd(bucketSizes[cellIdx], -1) - 1;
+    uint inBucketIndex = atomicAdd(bucketSizes[cellIdx], -1);
     uint particleIdx = prefixSums[cellIdx]-inBucketIndex;
 
     Positions[particleIdx].xyz = pos;

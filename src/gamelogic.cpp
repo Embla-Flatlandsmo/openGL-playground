@@ -74,22 +74,14 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
  */
 void initGame(GLFWwindow* window) {
 
-    // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-    // Callbacks setup for user input
-    // glfwSetCursorPosCallback(window, mouseCallback);
-    // glfwSetMouseButtonCallback(window, mouseButtonCallback);
     glfwSetKeyCallback(window, keyboardCallback);
 
     screen = new ScreenQuad();
     camera = new Gloom::Camera(glm::vec3(20, 20, 20));
     camera->setMoveSpeed(move_speed_normal);
     sky = new Sky();
-
-    // cloud = new CloudBox(glm::vec3(-150.,-20.,-150.), glm::vec3(150., 50., 150.)); // Why is it multiplied by 10?
-    // cloud = new CloudBox(glm::vec3(-100.,-20.,-100.), glm::vec3(100., 40., 100.)); // Why is it multiplied by 10?
     cloud = new CloudBox(glm::vec3(-100,-100,-100), glm::vec3(150,150,150));
-    // particles = new ParticleSystem(glm::vec3(-20.,-20.,-20.), glm::vec3(20., 20., 20.));
     // If the box contains (0,0,0), the boids always try to go for the edge for some reason..
     particles = new ParticleSystem(glm::vec3(10.,10.,10.), glm::vec3(40., 40., 40.)); 
 
@@ -117,7 +109,7 @@ void renderFrame(GLFWwindow* window) {
 
     screen->bindFramebuffer();
     sky->render();
-    particles->render(window, camera);
+    particles->render(camera);
 
     cloud->setDepthBuffer(screen->depth_texture);
     cloud->setColorBuffer(screen->color_texture);
@@ -127,6 +119,8 @@ void renderFrame(GLFWwindow* window) {
     screen->render();
 
 }
+
+
 
 void renderUI(void) {
 
@@ -141,7 +135,7 @@ void renderUI(void) {
     ImVec2 diagnostics_window_pivot = ImVec2(0.0f, 0.0f);
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove;
     ImGui::SetNextWindowPos(diagnostics_window_pos, ImGuiCond_Always, diagnostics_window_pivot);
-    ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
+    ImGui::SetNextWindowBgAlpha(0.35f); // Transparent-ish background
     
     ImGui::Begin("Diagonstics", NULL, window_flags);
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",

@@ -28,7 +28,21 @@ CloudBox::CloudBox(glm::vec3 low, glm::vec3 high)
     rayMarchCloud->attach("../res/shaders/cloud/ray_march.comp");
     rayMarchCloud->link();
 
-    generateTextures();
+    //compute shaders
+    perlinWorley = new Gloom::Shader();
+    perlinWorley->attach("../res/shaders/cloud/perlinworley.comp");
+    perlinWorley->link();
+
+    //make texture
+    this->perlinTex = generateTexture3D(128, 128, 128);
+    perlinWorley->activate();
+    glUniform1i(perlinWorley->getUniformFromName("noiseTex"), 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_3D, this->perlinTex);
+    glBindImageTexture(0, this->perlinTex, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
+    glDispatchCompute(INT_CEIL(128, 4), INT_CEIL(128, 4), INT_CEIL(128, 4));
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+    glGenerateMipmap(GL_TEXTURE_3D);
 }
 
 void CloudBox::setDepthBuffer(GLuint textureID)
@@ -99,26 +113,6 @@ void CloudBox::render(void)
     glBindTexture(GL_TEXTURE_3D, 0);
     rayMarchCloud->deactivate();
     screen.render();
-}
-
-void CloudBox::generateTextures()
-{
-	/////////////////// TEXTURE GENERATION //////////////////
-    //compute shaders
-    perlinWorley = new Gloom::Shader();
-    perlinWorley->attach("../res/shaders/cloud/perlinworley.comp");
-    perlinWorley->link();
-
-    //make texture
-    this->perlinTex = generateTexture3D(128, 128, 128);
-    perlinWorley->activate();
-    glUniform1i(perlinWorley->getUniformFromName("noiseTex"), 0);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_3D, this->perlinTex);
-    glBindImageTexture(0, this->perlinTex, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
-    glDispatchCompute(INT_CEIL(128, 4), INT_CEIL(128, 4), INT_CEIL(128, 4));
-    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-    glGenerateMipmap(GL_TEXTURE_3D);
 }
 
 void CloudBox::setDebug(bool enable)

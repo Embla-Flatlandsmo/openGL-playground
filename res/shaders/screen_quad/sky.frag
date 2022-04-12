@@ -2,8 +2,6 @@
 out vec4 FragColor;
 
 uniform vec3 skyColorBottom = vec3(183, 237, 255)/255.0;
-
-// uniform vec3 skyColorBottom = vec3(0.0,0.74902, 1.0);
 uniform vec3 skyColorTop = vec3(0.0,0.74902, 1.0);
 
 uniform vec3 lightDirection = normalize(vec3(0.5, 0.5, 0.0));
@@ -75,53 +73,3 @@ void main()
 
 	FragColor = vec4(color, 1.0);
 }
-
-
-
-
-
-
-
-
-
-
-
-// #version 430 core
-
-
-// uniform vec3 sun_direction;
-// uniform float sun_distance = 100.0;
-
-// uniform mat4 view_mat;
-// uniform mat4 inv_view;
-// uniform mat4 inv_proj;
-// uniform vec4 viewport = vec4(0.0, 0.0, 1366.0, 768.0);
-
-// // const vec3 skyColour = 0.6 * vec3(0.09, 0.33, 0.81);
-// const vec3 skyColour = 0.6*vec3(0.0,0.74902, 1.0);
-
-// out vec4 color;
-
-// vec3 rayDirection(float fieldOfView, vec2 fragCoord) {
-//     vec2 xy = fragCoord - viewport.zw / 2.0;
-//     float z = (0.5 * viewport.z) / tan(radians(80.0) / 2.0);
-//     return normalize(vec3(xy, -z));
-// }
-
-// //Darken sky when looking up.
-// vec3 getSkyColour(vec3 rayDir){
-//     return mix(skyColour, 0.5*skyColour, rayDir.y);
-// }
-
-// void main()
-// {
-//     // vec4 ray_dir_ndc = vec4(gl_FragCoord.xy, 1.0 , 1.0);
-//     // vec4 ray_dir_view = inv_proj*ray_dir_ndc;
-
-//     // // I don't know why this works, but it does
-//     // ray_dir_view = vec4(ray_dir_view.xy, -1.0, 0.0);
-//     // vec4 ray_dir_world = (inv_view*ray_dir_view);
-//     vec4 rayDir = vec4(rayDirection(80.0, gl_FragCoord.xy), 1.0);
-//     rayDir = normalize(view_mat * rayDir);
-//     color = vec4(getSkyColour(rayDir.xyz), 1.0);
-// }

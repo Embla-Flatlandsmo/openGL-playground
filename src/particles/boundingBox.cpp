@@ -96,17 +96,14 @@ BoundingBox::BoundingBox(glm::vec3 low, glm::vec3 high, float cell_size)
 
 BoundingBox::~BoundingBox()
 {
-    // TODO
+    // TODO: Be a good chap for destructors
     boxShader->destroy();
 }
 
-void BoundingBox::renderAsWireframe(GLFWwindow *window, Gloom::Camera *camera)
+void BoundingBox::renderAsWireframe(Gloom::Camera *camera)
 {
-    int windowWidth, windowHeight;
-    glfwGetWindowSize(window, &windowWidth, &windowHeight);
     glm::mat4 model = glm::translate(low);
-    glm::mat4 projection = glm::perspective(glm::radians(80.0f), float(windowWidth) / float(windowHeight), 0.1f, 350.f);
-    glm::mat4 MVP = projection * camera->getViewMatrix()*model;
+    glm::mat4 MVP = camera->getProjMatrix() * camera->getViewMatrix()*model;
 
     // Use the box shader to render the bounding box
     boxShader->activate();

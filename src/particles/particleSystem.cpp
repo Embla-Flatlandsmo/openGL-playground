@@ -24,8 +24,10 @@
 ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
 {
     particleModel = new Mesh(loadObj("../res/models/boid.obj"));
-
-    boundingBox = new BoundingBox(low, high, boidProperties.view_range);
+    // Make sure that the low and high coordinates are correct
+    glm::vec3 bb_low = glm::vec3(glm::min(low.x, high.x), glm::min(low.y, high.y), glm::min(low.z, high.z));
+    glm::vec3 bb_high = glm::vec3(glm::max(low.x, high.x), glm::max(low.y, high.y), glm::max(low.z, high.z));
+    boundingBox = new BoundingBox(bb_low, bb_high, boidProperties.view_range);
 
     particlePoints = new struct pos[NUM_PARTICLES];
     particleVels = new struct vel[NUM_PARTICLES];
@@ -46,6 +48,7 @@ ParticleSystem::ParticleSystem(glm::vec3 low, glm::vec3 high)
     glUniform1i(integrationShader->getUniformFromName("numBoids"), NUM_PARTICLES);
     glUniform3uiv(integrationShader->getUniformFromName("gridRes"), 1, glm::value_ptr(boundingBox->resolution));
     integrationShader->deactivate();
+
     // /* For debugging :) */
     // uint32_t arraySize = sizeof(GLuint)*(NUM_PARTICLES);
     // glBindBuffer(GL_SHADER_STORAGE_BUFFER, particlePosSSBO);
@@ -131,18 +134,15 @@ void ParticleSystem::update()
  * @param camera Camera position
  * @param debug true to show the bounding box
  */
-void ParticleSystem::render(GLFWwindow *window, Gloom::Camera *camera)
+void ParticleSystem::render(Gloom::Camera *camera)
 {
-    int windowWidth, windowHeight;
-    glfwGetWindowSize(window, &windowWidth, &windowHeight);
-
     // We set a projection matrix to get some perspective going!
     glm::mat4 projection = camera->getProjMatrix();
     glm::mat4 VP = projection * camera->getViewMatrix();
 
     if (debug)
     {
-        boundingBox->renderAsWireframe(window, camera);
+        boundingBox->renderAsWireframe(camera);
     }
     renderShader->activate();
     // Update uniforms
@@ -362,8 +362,7 @@ void ParticleSystem::computePrefixSum() {
     glDispatchCompute(INT_CEIL(boundingBox->numCells, WORK_GROUP_SIZE), 1, 1);
     glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
-    // // Noe er galt med prefix sum!!!
-    // // Fungerer for numCells=4096
+    // /* For debugging :) */
     // uint32_t arraySize = sizeof(GLuint)*(boundingBox->numCells);
     // glBindBuffer(GL_SHADER_STORAGE_BUFFER, prefixSumsLoc);
     // GLuint* sums = (GLuint*)glMapNamedBufferRange(prefixSumsLoc, 0, arraySize, GL_MAP_READ_BIT);

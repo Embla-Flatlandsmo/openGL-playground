@@ -103,7 +103,7 @@ vec3 uvwFromWorldPos(vec3 pos)
 {
   vec3 bbsize = AABBmax-AABBmin;
   float largest_side = max(max(bbsize.x, bbsize.y), bbsize.z);
-  // float smallest_side = min(min(bbsize.x, bbsize.y), bbsize.z);
+  
   // Bring pos to world origin
   vec3 centered_pos = pos-AABBmin;
 

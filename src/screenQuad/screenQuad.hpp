@@ -28,10 +28,26 @@ class ScreenQuad
         ScreenQuad(QuadUsage usage);
         ScreenQuad(void); //TODO: this is messy
         ~ScreenQuad(void);
-        /***/
+        /**
+         * @brief Renders the quad onto the screen
+         */
         void render(void);
+        /**
+         * @brief Binds a framebuffer. All subsequent drawcalls will
+         * write to the quad's framebuffer and not to the screen
+         * 
+         */
         void bindFramebuffer(void);
+        /**
+         * @brief Unbind the framebuffer to stop writing to
+         * the quad's framebuffer.
+         * 
+         */
         void unbindFramebuffer(void);
+
+        /**
+         * @brief Draws ImGui panel for post-processing effect selection
+         */
         void renderUI(void);
         GLuint color_texture;
         GLuint depth_texture;

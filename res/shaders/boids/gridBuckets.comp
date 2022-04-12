@@ -42,9 +42,5 @@ void main(void)
     }
     vec3 pos = Positions[gid].xyz;
     uint cellIdx = getFlatCellIDfromPos(pos);
-    // vec3 range = diagonal/gridRes;
-    // uvec3 vgridIdx = uvec3((Positions[gid].xyz-boundingBoxLow)/range);
-    // uint cellIdx =  uint(gridRes.x * gridRes.y * vgridIdx.z + gridRes.x * vgridIdx.y + vgridIdx.x);
-
     atomicAdd(bucketSizes[cellIdx], 1);
 }

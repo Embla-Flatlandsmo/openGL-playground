@@ -35,7 +35,5 @@ void Sky::update(Gloom::Camera *camera)
 
 void Sky::renderUI(void)
 {
-    ImGui::Begin("Sky properties");
-    // ImGui::SliderFloat("Step size", &step_size, 0.5f, 3.f);
-    ImGui::End();
+    // Not implemented
 }

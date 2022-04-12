@@ -76,11 +76,8 @@ boid_t get_boid(uint i) {
 }
 
 vec3 avoidBoundary(vec3 pos) {
-    //TODO: Find a better way to do this
     vec3 centeredPos = pos-boundingBoxLow-diagonal/2;
     return -centeredPos;
-    // float distanceFromEdge = distance(abs(centeredPos), diagonal/2);
-    // return -centeredPos/clamp(distanceFromEdge, 0.001, 1000.0);
 }
 
 
@@ -180,7 +177,6 @@ void flock(uint particleID)
 
 void flockInCell(uint x, uint y, uint z) {
     uint id = flattenCellID(x, y, z);
-    // uint id = z * gridRes.x * gridRes.y + y * gridRes.x + x;
     uint start;
     if (id == 0) {
         start = 0;
