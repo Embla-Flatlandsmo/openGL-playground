@@ -100,13 +100,24 @@ private:
     GLuint particleVAO;
 
     /**
-     * @brief 
-     * 
+     * @brief CPU storage of boid positions. This buffer
+     * is only used for initializing the boids.
      */
     struct pos *particlePoints;
+    /**
+     * @brief CPU storage of boid velocities. This buffer
+     * is only used for initializing the boids.
+     */
     struct vel *particleVels;
+    /**
+     * @brief CPU storage of boid accelerations. This buffer
+     * is only used for initializing the boids.
+     */
     struct acc *particleAccs;
 
+    /**
+     * @brief Parameters for the boid simulation
+     */
     struct particleProperties boidProperties;
 
     Gloom::Shader *renderShader;
@@ -129,8 +140,29 @@ private:
     Gloom::Shader *gridBucketsShader;
     Gloom::Shader *reindexShader;
 
+    /**
+     * @brief Counts the number of boids present 
+     * in each cell grid
+     */
     void countBucketSizes();
+
+    /**
+     * @brief Calculates the prefix sum of the boids in the
+     * grid cells. i.e. cumulative sum of the bucketSizes array.
+     */
     void computePrefixSum();
+
+    /**
+     * @brief Reindexes the boids positions and velocity
+     * buffers such that a boid belonging to cell n 
+     * always has a lower index than a boid belonging to cell n+1
+     * 
+     */
     void computeReindexGrid();
+
+    /**
+     * @brief Helper function for initializing SSBOs and shaders
+     * needed to sort boids based on grid position.
+     */
     void initGridSorting();
 };

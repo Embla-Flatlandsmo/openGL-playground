@@ -91,5 +91,8 @@ class CloudBox
         GLuint perlinTex = 0;
 
         bool debug = false;
+        /**
+         * @brief Parameters for clouds, set in runtime using ImGui
+         */
         struct cloudProperties cloud_properties;
 };

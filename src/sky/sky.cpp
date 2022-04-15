@@ -13,24 +13,25 @@
 
 Sky::Sky()
 {
-    sky = new ScreenQuad(SKY);
+    quad = new ScreenQuad(SKY);
 }
 Sky::~Sky()
 {
-    free(sky);
+    // TODO: be a good programmer and destroy this properly
+    quad->screen_shader->destroy();
 }
 
 void Sky::render()
 {
-    sky->render();
+    quad->render();
 }
 
 void Sky::update(Gloom::Camera *camera)
 {
-    sky->screen_shader->activate();
-    glUniformMatrix4fv(sky->screen_shader->getUniformFromName("view_mat"), 1, GL_FALSE, glm::value_ptr(camera->getViewMatrix()));
-    glUniformMatrix4fv(sky->screen_shader->getUniformFromName("inv_proj"), 1, GL_FALSE, glm::value_ptr(glm::inverse(camera->getProjMatrix())));
-    glUniformMatrix4fv(sky->screen_shader->getUniformFromName("inv_view"), 1, GL_FALSE, glm::value_ptr(glm::inverse(camera->getViewMatrix())));
+    quad->screen_shader->activate();
+    glUniformMatrix4fv(quad->screen_shader->getUniformFromName("view_mat"), 1, GL_FALSE, glm::value_ptr(camera->getViewMatrix()));
+    glUniformMatrix4fv(quad->screen_shader->getUniformFromName("inv_proj"), 1, GL_FALSE, glm::value_ptr(glm::inverse(camera->getProjMatrix())));
+    glUniformMatrix4fv(quad->screen_shader->getUniformFromName("inv_view"), 1, GL_FALSE, glm::value_ptr(glm::inverse(camera->getViewMatrix())));
 }
 
 void Sky::renderUI(void)
